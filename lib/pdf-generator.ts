@@ -260,9 +260,18 @@ export class CharacterSheetPDFGenerator {
         const getAbilityModifier = (score: number) =>
             Math.floor((score - 10) / 2);
 
+        // Simple HTML escaping to prevent XSS when inserting user-controlled data
+        const escapeHtml = (value: unknown): string =>
+            String(value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+
         // Helper for skills (for demo, just list them)
         const skillsList = character.skills
-            .map((skill) => `<li>${skill}</li>`)
+            .map((skill) => `<li>${escapeHtml(skill)}</li>`)
             .join("");
 
         return `
@@ -271,7 +280,7 @@ export class CharacterSheetPDFGenerator {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${character.name} - D&D Character Sheet</title>
+    <title>${escapeHtml(character.name)} - D&D Character Sheet</title>
     <style>
         @import url('https://fonts.googleapis.com/css?family=Roboto+Slab:700|Roboto:400,700&display=swap');
         body {
@@ -694,27 +703,37 @@ export class CharacterSheetPDFGenerator {
             <div class="story-title">Character Story</div>
             ${
                 character.personality
-                    ? `<div class="story-item"><strong>Personality:</strong> ${character.personality}</div>`
+                    ? `<div class="story-item"><strong>Personality:</strong> ${escapeHtml(
+                          character.personality
+                      )}</div>`
                     : ""
             }
             ${
                 character.ideals
-                    ? `<div class="story-item"><strong>Ideals:</strong> ${character.ideals}</div>`
+                    ? `<div class="story-item"><strong>Ideals:</strong> ${escapeHtml(
+                          character.ideals
+                      )}</div>`
                     : ""
             }
             ${
                 character.bonds
-                    ? `<div class="story-item"><strong>Bonds:</strong> ${character.bonds}</div>`
+                    ? `<div class="story-item"><strong>Bonds:</strong> ${escapeHtml(
+                          character.bonds
+                      )}</div>`
                     : ""
             }
             ${
                 character.flaws
-                    ? `<div class="story-item"><strong>Flaws:</strong> ${character.flaws}</div>`
+                    ? `<div class="story-item"><strong>Flaws:</strong> ${escapeHtml(
+                          character.flaws
+                      )}</div>`
                     : ""
             }
             ${
                 character.backstory
-                    ? `<div class="story-item"><strong>Backstory:</strong> ${character.backstory}</div>`
+                    ? `<div class="story-item"><strong>Backstory:</strong> ${escapeHtml(
+                          character.backstory
+                      )}</div>`
                     : ""
             }
         </div>
