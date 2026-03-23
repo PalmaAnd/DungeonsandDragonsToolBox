@@ -525,14 +525,16 @@ export class CharacterSheetPDFGenerator {
 <body>
     <div class="sheet-container">
         <div class="sheet-header">
-            <div class="sheet-title">${character.name || "Character Name"}</div>
+            <div class="sheet-title">${escapeHtml(
+                character.name || "Character Name"
+            )}</div>
             <div class="sheet-meta">
                 <span><strong>Level:</strong> ${character.level}</span>
-                <span><strong>Class:</strong> ${character.class}${
-            character.subclass ? ` (${character.subclass})` : ""
+                <span><strong>Class:</strong> ${escapeHtml(character.class)}${
+            character.subclass ? ` (${escapeHtml(character.subclass)})` : ""
         }</span>
-                <span><strong>Race:</strong> ${character.race}${
-            character.subrace ? ` (${character.subrace})` : ""
+                <span><strong>Race:</strong> ${escapeHtml(character.race)}${
+            character.subrace ? ` (${escapeHtml(character.subrace)})` : ""
         }</span>
                 <span><strong>Background:</strong> ${
                     character.background
