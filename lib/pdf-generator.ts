@@ -536,10 +536,12 @@ export class CharacterSheetPDFGenerator {
                 <span><strong>Race:</strong> ${escapeHtml(character.race)}${
             character.subrace ? ` (${escapeHtml(character.subrace)})` : ""
         }</span>
-                <span><strong>Background:</strong> ${
+                <span><strong>Background:</strong> ${escapeHtml(
                     character.background
-                }</span>
-                <span><strong>Alignment:</strong> ${character.alignment}</span>
+                )}</span>
+                <span><strong>Alignment:</strong> ${escapeHtml(
+                    character.alignment
+                )}</span>
             </div>
         </div>
         <div class="main-grid">
