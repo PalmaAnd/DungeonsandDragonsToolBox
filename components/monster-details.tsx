@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Image from "next/image";
+import DOMPurify from "dompurify";
 
 interface Monster {
     name: string;
@@ -200,7 +201,9 @@ export function MonsterDetails({ monster }: MonsterDetailsProps) {
                             </h3>
                             <div
                                 dangerouslySetInnerHTML={{
-                                    __html: monster.Traits,
+                                    __html: DOMPurify.sanitize(
+                                        monster.Traits
+                                    ),
                                 }}
                             />
                         </div>
@@ -214,7 +217,9 @@ export function MonsterDetails({ monster }: MonsterDetailsProps) {
                             </h3>
                             <div
                                 dangerouslySetInnerHTML={{
-                                    __html: monster.Actions,
+                                    __html: DOMPurify.sanitize(
+                                        monster.Actions
+                                    ),
                                 }}
                             />
                         </div>
@@ -229,9 +234,11 @@ export function MonsterDetails({ monster }: MonsterDetailsProps) {
                                     </h3>
                                     <div
                                         dangerouslySetInnerHTML={{
-                                            __html: monster[
-                                                "Legendary Actions"
-                                            ],
+                                            __html: DOMPurify.sanitize(
+                                                monster[
+                                                    "Legendary Actions"
+                                                ] as string
+                                            ),
                                         }}
                                     />
                                 </div>
