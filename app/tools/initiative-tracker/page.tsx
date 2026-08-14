@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -171,6 +170,7 @@ export default function InitiativeTracker() {
         number | null
     >(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const nextTurnRef = useRef<() => void>(() => {});
 
     // Timer effect
     useEffect(() => {
@@ -179,7 +179,7 @@ export default function InitiativeTracker() {
                 setTurnTimer((prev) => {
                     if (prev >= maxTurnTime) {
                         // Auto-advance turn when timer expires
-                        nextTurn();
+                        nextTurnRef.current();
                         return 0;
                     }
                     return prev + 1;
@@ -382,6 +382,12 @@ export default function InitiativeTracker() {
         setCurrentTurn(nextTurnIndex);
         setTurnTimer(0); // Reset timer for new turn
     };
+
+    // Keep the ref in sync so the timer interval always calls the latest
+    // nextTurn closure instead of a stale one captured when the timer started.
+    useEffect(() => {
+        nextTurnRef.current = nextTurn;
+    });
 
     const toggleTimer = () => {
         setTimerActive(!timerActive);

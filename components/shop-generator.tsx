@@ -366,9 +366,13 @@ export function ShopGenerator({ itemsData }: ShopGeneratorProps) {
         }
     };
 
-    // Generate shop on initial load
+    // Generate a randomized shop on initial load. This has to run client-side
+    // (post-mount) rather than during render, since the randomization would
+    // otherwise differ between the server render and the client hydration
+    // pass and trigger a mismatch.
     useEffect(() => {
         if (itemsData) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             generateShop();
         }
     }, [itemsData]);

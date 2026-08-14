@@ -55,6 +55,15 @@ interface MonsterCompendiumProps {
     monsters: Monster[];
 }
 
+// Challenge ratings can be a fraction like "1/8"; parse those without eval().
+function parseChallengeRating(cr: string): number {
+    if (cr.includes("/")) {
+        const [numerator, denominator] = cr.split("/");
+        return parseFloat(numerator) / parseFloat(denominator);
+    }
+    return parseFloat(cr);
+}
+
 export function MonsterCompendium({ monsters }: MonsterCompendiumProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [typeFilter, setTypeFilter] = useState("all");
@@ -65,44 +74,38 @@ export function MonsterCompendium({ monsters }: MonsterCompendiumProps) {
         null
     );
 
-    // Process monster data to ensure consistent CR field
+    // Process monster data to ensure consistent CR/type/size/alignment fields.
+    // Derives everything from `meta` once here (instead of mutating shared
+    // monster objects during render) so every consumer sees the same values.
     const processedMonsters = useMemo(() => {
         return monsters.map((monster) => {
-            // If cr is missing but Challenge exists, use that
-            if (!monster.cr && monster.Challenge) {
-                return {
-                    ...monster,
-                    cr: monster.Challenge.replace("CR ", "").split(" (")[0], // Remove "CR " prefix if present
-                };
-            }
-            return monster;
+            const [rawSize, rawType, rawAlignment] = monster.meta.split(" ");
+            const type = rawType.replace(",", "");
+            return {
+                ...monster,
+                cr:
+                    monster.cr ||
+                    (monster.Challenge
+                        ? monster.Challenge.replace("CR ", "").split(" (")[0]
+                        : monster.cr),
+                size: rawSize,
+                type: type.charAt(0).toUpperCase() + type.slice(1),
+                alignment: rawAlignment,
+            };
         });
     }, [monsters]);
 
     const monsterTypes = useMemo(
         () =>
             Array.from(
-                new Set(
-                    processedMonsters.map((monster) => {
-                        const type = monster.meta
-                            .split(" ")[1]
-                            .replace(",", "");
-                        monster.type =
-                            type.charAt(0).toUpperCase() + type.slice(1);
-                        return monster.type;
-                    })
-                )
+                new Set(processedMonsters.map((monster) => monster.type))
             ).sort(),
         [processedMonsters]
     );
     const monsterSizes = useMemo(
         () =>
             Array.from(
-                new Set(
-                    processedMonsters.map(
-                        (monster) => monster.meta.split(" ")[0]
-                    )
-                )
+                new Set(processedMonsters.map((monster) => monster.size))
             ).sort(),
         [processedMonsters]
     );
@@ -110,9 +113,7 @@ export function MonsterCompendium({ monsters }: MonsterCompendiumProps) {
         () =>
             Array.from(
                 new Set(
-                    processedMonsters.map(
-                        (monster) => monster.meta.split(" ")[2]
-                    )
+                    processedMonsters.map((monster) => monster.alignment)
                 )
             ).sort(),
         [processedMonsters]
@@ -121,11 +122,9 @@ export function MonsterCompendium({ monsters }: MonsterCompendiumProps) {
     // Get unique challenge ratings for filter
     const challengeRatings = useMemo(() => {
         const ratings = new Set(processedMonsters.map((monster) => monster.cr));
-        return Array.from(ratings).sort((a, b) => {
-            const aNum = a.includes("/") ? eval(a) : parseFloat(a);
-            const bNum = b.includes("/") ? eval(b) : parseFloat(b);
-            return aNum - bNum;
-        });
+        return Array.from(ratings).sort(
+            (a, b) => parseChallengeRating(a) - parseChallengeRating(b)
+        );
     }, [processedMonsters]);
 
     // Filter monsters based on search term and filters

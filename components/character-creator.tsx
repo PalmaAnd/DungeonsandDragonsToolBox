@@ -363,7 +363,11 @@ export function CharacterCreator({
         }));
     };
 
+    // hitPoints/armorClass are stored as fields on `character` (read and
+    // edited elsewhere, e.g. PDF export), so they're kept in sync here
+    // rather than computed via useMemo.
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setCharacter((prev) => ({
             ...prev,
             hitPoints: calculateHitPoints(),
