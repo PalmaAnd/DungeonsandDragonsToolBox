@@ -4,44 +4,10 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Image from "next/image";
 import DOMPurify from "dompurify";
-
-interface Monster {
-    name: string;
-    meta: string;
-    "Armor Class": string;
-    "Hit Points": string;
-    Speed: string;
-    STR: string;
-    STR_mod: string;
-    DEX: string;
-    DEX_mod: string;
-    CON: string;
-    CON_mod: string;
-    INT: string;
-    INT_mod: string;
-    WIS: string;
-    WIS_mod: string;
-    CHA: string;
-    CHA_mod: string;
-    "Saving Throws"?: string;
-    Skills?: string;
-    "Damage Immunities"?: string;
-    "Condition Immunities"?: string;
-    Senses: string;
-    Languages: string;
-    Challenge: string;
-    Traits: string;
-    Actions: string;
-    "Legendary Actions"?: string;
-    img_url: string;
-    type: string;
-    size: string;
-    alignment: string;
-    cr: string;
-}
+import type { MonsterDetail } from "@/lib/monsters";
 
 interface MonsterDetailsProps {
-    monster: Monster;
+    monster: MonsterDetail;
 }
 
 export function MonsterDetails({ monster }: MonsterDetailsProps) {

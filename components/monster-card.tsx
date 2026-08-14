@@ -10,24 +10,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-
-interface Monster {
-    name: string;
-    meta: string;
-    Challenge: string;
-    size: string;
-    alignment: string;
-    img_url: string;
-    type: string;
-    cr: string;
-}
+import type { MonsterSummary } from "@/lib/monsters";
 
 interface MonsterCardProps {
-    monster: Monster;
+    monster: MonsterSummary;
     onClick: () => void;
+    loading?: boolean;
 }
 
-export function MonsterCard({ monster, onClick }: MonsterCardProps) {
+export function MonsterCard({ monster, onClick, loading }: MonsterCardProps) {
     return (
         <Card className="overflow-hidden h-full flex flex-col">
             <div className="relative h-48 w-full">
@@ -56,8 +47,8 @@ export function MonsterCard({ monster, onClick }: MonsterCardProps) {
                 </div>
             </CardContent>
             <CardFooter>
-                <Button onClick={onClick} className="w-full">
-                    View Details
+                <Button onClick={onClick} className="w-full" disabled={loading}>
+                    {loading ? "Loading..." : "View Details"}
                 </Button>
             </CardFooter>
         </Card>
