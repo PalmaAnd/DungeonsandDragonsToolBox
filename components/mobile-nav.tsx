@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { DataTransfer } from "@/components/data-transfer";
+import { ActiveCampaignSelector } from "@/components/active-campaign-selector";
 
 export function MobileNav() {
     const [open, setOpen] = React.useState(false);
@@ -101,6 +102,12 @@ export function MobileNav() {
                                 {route.label}
                             </Link>
                         ))}
+                    </div>
+                    <div className="space-y-1 px-4">
+                        <div className="pb-2 font-semibold tracking-tight">
+                            Campaign
+                        </div>
+                        <ActiveCampaignSelector />
                     </div>
                     <div className="space-y-1 px-4">
                         <div className="pb-2 font-semibold tracking-tight">

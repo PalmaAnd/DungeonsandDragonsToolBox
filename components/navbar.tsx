@@ -12,6 +12,7 @@ import { ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MobileNav } from "@/components/mobile-nav";
 import { DataTransfer } from "@/components/data-transfer";
+import { ActiveCampaignSelector } from "@/components/active-campaign-selector";
 
 export function Navbar() {
     return (
@@ -102,6 +103,7 @@ export function Navbar() {
                 </div>
 
                 <div className="flex items-center gap-1">
+                    <ActiveCampaignSelector />
                     <DataTransfer />
                     <ThemeToggle />
                 </div>
