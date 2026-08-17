@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Swords } from "lucide-react";
 import Image from "next/image";
 
 interface Monster {
@@ -41,9 +43,13 @@ interface Monster {
 
 interface MonsterDetailsProps {
     monster: Monster;
+    onAddToEncounter?: () => void;
 }
 
-export function MonsterDetails({ monster }: MonsterDetailsProps) {
+export function MonsterDetails({
+    monster,
+    onAddToEncounter,
+}: MonsterDetailsProps) {
     // Use cr if available, otherwise fallback to Challenge
     const challengeRating = monster.cr || monster.Challenge;
     return (
@@ -63,6 +69,17 @@ export function MonsterDetails({ monster }: MonsterDetailsProps) {
                     <Badge variant="outline">CR {challengeRating}</Badge>
                 </div>
                 <p className="text-muted-foreground">{monster.meta}</p>
+                {onAddToEncounter && (
+                    <Button
+                        onClick={onAddToEncounter}
+                        variant="outline"
+                        size="sm"
+                        className="w-fit"
+                    >
+                        <Swords className="h-4 w-4 mr-2" />
+                        Add to Initiative Tracker
+                    </Button>
+                )}
             </CardHeader>
             <CardContent>
                 <ScrollArea className="h-[60vh]">

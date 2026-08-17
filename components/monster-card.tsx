@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Swords } from "lucide-react";
 import Image from "next/image";
 
 interface Monster {
@@ -25,9 +26,14 @@ interface Monster {
 interface MonsterCardProps {
     monster: Monster;
     onClick: () => void;
+    onAddToEncounter?: () => void;
 }
 
-export function MonsterCard({ monster, onClick }: MonsterCardProps) {
+export function MonsterCard({
+    monster,
+    onClick,
+    onAddToEncounter,
+}: MonsterCardProps) {
     return (
         <Card className="overflow-hidden h-full flex flex-col">
             <div className="relative h-48 w-full">
@@ -55,10 +61,21 @@ export function MonsterCard({ monster, onClick }: MonsterCardProps) {
                     <Badge variant="secondary">{monster.alignment}</Badge>
                 </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex gap-2">
                 <Button onClick={onClick} className="w-full">
                     View Details
                 </Button>
+                {onAddToEncounter && (
+                    <Button
+                        onClick={onAddToEncounter}
+                        variant="outline"
+                        size="icon"
+                        aria-label="Add to Initiative Tracker"
+                        title="Add to Initiative Tracker"
+                    >
+                        <Swords className="h-4 w-4" />
+                    </Button>
+                )}
             </CardFooter>
         </Card>
     );

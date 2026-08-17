@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,8 @@ import {
 import { MonsterCard } from "@/components/monster-card";
 import { MonsterDetails } from "@/components/monster-details";
 import { Search } from "lucide-react";
+import { generateId } from "@/lib/storage";
+import { addCombatantsToEncounter, type Combatant } from "@/lib/encounter";
 
 interface Monster {
     name: string;
@@ -78,7 +81,15 @@ function parseChallengeRating(cr: string): number {
     return parseFloat(cr);
 }
 
+// Pulls the leading number out of stat strings like "135 (18d10 + 36)" or
+// "17 (Natural Armor)".
+function parseLeadingNumber(text: string): number {
+    const match = text.match(/\d+/);
+    return match ? parseInt(match[0], 10) : 0;
+}
+
 export function MonsterCompendium({ monsters }: MonsterCompendiumProps) {
+    const router = useRouter();
     const [searchTerm, setSearchTerm] = useState("");
     const [typeFilter, setTypeFilter] = useState("all");
     const [crFilter, setCrFilter] = useState("all");
@@ -161,6 +172,24 @@ export function MonsterCompendium({ monsters }: MonsterCompendiumProps) {
         sizeFilter,
         alignmentFilter,
     ]);
+
+    const handleAddToEncounter = async (monster: Monster) => {
+        const combatant: Combatant = {
+            id: generateId(),
+            name: monster.name,
+            initiative: 0,
+            initiativeModifier: 0,
+            hp: parseLeadingNumber(monster["Hit Points"]),
+            maxHp: parseLeadingNumber(monster["Hit Points"]),
+            ac: parseLeadingNumber(monster["Armor Class"]),
+            isPlayer: false,
+            savingThrows: 3,
+            failedSaves: 0,
+            conditions: [],
+        };
+        await addCombatantsToEncounter([combatant]);
+        router.push("/tools/initiative-tracker");
+    };
 
     return (
         <div className="space-y-6">
@@ -288,7 +317,12 @@ export function MonsterCompendium({ monsters }: MonsterCompendiumProps) {
                     >
                         Back to List
                     </Button>
-                    <MonsterDetails monster={selectedMonster} />
+                    <MonsterDetails
+                        monster={selectedMonster}
+                        onAddToEncounter={() =>
+                            handleAddToEncounter(selectedMonster)
+                        }
+                    />
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -298,6 +332,9 @@ export function MonsterCompendium({ monsters }: MonsterCompendiumProps) {
                                 key={monster.name}
                                 monster={monster}
                                 onClick={() => setSelectedMonster(monster)}
+                                onAddToEncounter={() =>
+                                    handleAddToEncounter(monster)
+                                }
                             />
                         ))
                     ) : (
