@@ -37,6 +37,31 @@ const diceTypes: DieType[] = ["d4", "d6", "d8", "d10", "d12", "d20", "d100"];
 
 type StoredRollResult = Omit<RollResult, "timestamp"> & { timestamp: string };
 
+// Pure, state-independent helpers hoisted out of the component so they're
+// never mistaken for something invoked during render.
+const rollDie = (sides: number): number => {
+    return Math.floor(Math.random() * sides) + 1;
+};
+
+const rollD100 = (): { result: number; tens: number; ones: number } => {
+    const tens = rollDie(10); // 1-10, where 10 = 0
+    const ones = rollDie(10); // 1-10, where 10 = 0
+
+    const tensValue = tens === 10 ? 0 : tens;
+    const onesValue = ones === 10 ? 0 : ones;
+
+    const result = tensValue * 10 + onesValue;
+    return {
+        result: result === 0 ? 100 : result,
+        tens: tensValue,
+        ones: onesValue,
+    };
+};
+
+const generateId = (): string => {
+    return Date.now().toString() + Math.random().toString(36).substr(2, 9);
+};
+
 export function DiceRoller() {
     const [rolls, setRolls] = useState<RollResult[]>([]);
     const [customRoll, setCustomRoll] = useState("");
@@ -46,6 +71,7 @@ export function DiceRoller() {
             STORAGE_KEYS.diceRolls,
             []
         );
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrating from localStorage on mount, not derivable during render (no SSR value to read)
         setRolls(
             stored.map((roll) => ({
                 ...roll,
@@ -57,29 +83,6 @@ export function DiceRoller() {
     useEffect(() => {
         saveToStorage(STORAGE_KEYS.diceRolls, rolls.slice(0, MAX_STORED_ROLLS));
     }, [rolls]);
-
-    const rollDie = (sides: number): number => {
-        return Math.floor(Math.random() * sides) + 1;
-    };
-
-    const rollD100 = (): { result: number; tens: number; ones: number } => {
-        const tens = rollDie(10); // 1-10, where 10 = 0
-        const ones = rollDie(10); // 1-10, where 10 = 0
-
-        const tensValue = tens === 10 ? 0 : tens;
-        const onesValue = ones === 10 ? 0 : ones;
-
-        const result = tensValue * 10 + onesValue;
-        return {
-            result: result === 0 ? 100 : result,
-            tens: tensValue,
-            ones: onesValue,
-        };
-    };
-
-    const generateId = (): string => {
-        return Date.now().toString() + Math.random().toString(36).substr(2, 9);
-    };
 
     const handleRoll = (die: DieType) => {
         const sides = parseInt(die.substring(1));

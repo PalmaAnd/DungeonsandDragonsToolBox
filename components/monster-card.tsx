@@ -28,11 +28,6 @@ interface MonsterCardProps {
 }
 
 export function MonsterCard({ monster, onClick }: MonsterCardProps) {
-    monster.size = monster.meta.split(" ")[0];
-    const type = monster.meta.split(" ")[1].replace(",", "");
-    monster.type = type.charAt(0).toUpperCase() + type.slice(1);
-    monster.alignment = monster.meta.split(" ")[2];
-
     return (
         <Card className="overflow-hidden h-full flex flex-col">
             <div className="relative h-48 w-full">

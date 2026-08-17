@@ -381,10 +381,12 @@ export function ShopGenerator({ itemsData }: ShopGeneratorProps) {
             null
         );
         if (saved) {
+            /* eslint-disable react-hooks/set-state-in-effect -- hydrating from localStorage on mount, not derivable during render (no SSR value to read) */
             setShopDetails(saved.shopDetails);
             setInventory(saved.inventory);
             setShopStatus(saved.shopStatus);
             setCart(saved.cart);
+            /* eslint-enable react-hooks/set-state-in-effect */
         } else if (itemsData) {
             generateShop();
         }

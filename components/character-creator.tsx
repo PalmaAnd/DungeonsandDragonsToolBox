@@ -319,6 +319,7 @@ export function CharacterCreator({
     const [activeSavedId, setActiveSavedId] = useState<number | null>(null);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrating from localStorage on mount, not derivable during render (no SSR value to read)
         setSavedCharacters(loadFromStorage(STORAGE_KEYS.savedCharacters, []));
     }, []);
 
@@ -457,6 +458,7 @@ export function CharacterCreator({
     };
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hitPoints/armorClass are derived from several character fields and merged back into the single character state object; not a simple prop->state mirror
         setCharacter((prev) => ({
             ...prev,
             hitPoints: calculateHitPoints(),

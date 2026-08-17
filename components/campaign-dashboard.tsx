@@ -62,10 +62,12 @@ export function CampaignDashboard() {
     const [form, setForm] = useState<CampaignForm>(emptyForm);
 
     useEffect(() => {
+        /* eslint-disable react-hooks/set-state-in-effect -- hydrating from localStorage on mount, not derivable during render (no SSR value to read) */
         setCampaigns(loadFromStorage(STORAGE_KEYS.campaigns, []));
         setSavedCharacters(
             loadFromStorage(STORAGE_KEYS.savedCharacters, [])
         );
+        /* eslint-enable react-hooks/set-state-in-effect */
     }, []);
 
     useEffect(() => {

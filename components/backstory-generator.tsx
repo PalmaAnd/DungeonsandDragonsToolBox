@@ -44,6 +44,7 @@ export function BackstoryGenerator() {
     >([]);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrating from localStorage on mount, not derivable during render (no SSR value to read)
         setSavedBackstories(
             loadFromStorage(STORAGE_KEYS.savedBackstories, [])
         );

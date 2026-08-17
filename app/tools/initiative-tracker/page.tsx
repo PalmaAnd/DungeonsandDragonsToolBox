@@ -187,10 +187,12 @@ export default function InitiativeTracker() {
             null
         );
         if (saved) {
+            /* eslint-disable react-hooks/set-state-in-effect -- hydrating from localStorage on mount, not derivable during render (no SSR value to read) */
             setCombatants(saved.combatants);
             setCurrentTurn(saved.currentTurn);
             setIsCombatActive(saved.isCombatActive);
             setMaxTurnTime(saved.maxTurnTime);
+            /* eslint-enable react-hooks/set-state-in-effect */
         }
     }, []);
 
@@ -209,6 +211,16 @@ export default function InitiativeTracker() {
         setCurrentTurn(0);
         setIsCombatActive(false);
         setTimerActive(false);
+    };
+
+    const nextTurn = () => {
+        let nextTurnIndex = (currentTurn + 1) % combatants.length;
+        while (combatants[nextTurnIndex] && combatants[nextTurnIndex].hp <= 0) {
+            nextTurnIndex = (nextTurnIndex + 1) % combatants.length;
+            if (nextTurnIndex === currentTurn) break; // Prevent infinite loop
+        }
+        setCurrentTurn(nextTurnIndex);
+        setTurnTimer(0); // Reset timer for new turn
     };
 
     // Timer effect
@@ -410,16 +422,6 @@ export default function InitiativeTracker() {
             setTurnTimer(0);
             setTimerActive(true);
         }
-    };
-
-    const nextTurn = () => {
-        let nextTurnIndex = (currentTurn + 1) % combatants.length;
-        while (combatants[nextTurnIndex] && combatants[nextTurnIndex].hp <= 0) {
-            nextTurnIndex = (nextTurnIndex + 1) % combatants.length;
-            if (nextTurnIndex === currentTurn) break; // Prevent infinite loop
-        }
-        setCurrentTurn(nextTurnIndex);
-        setTurnTimer(0); // Reset timer for new turn
     };
 
     const toggleTimer = () => {

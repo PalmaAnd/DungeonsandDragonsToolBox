@@ -21,6 +21,7 @@ export function MobileNav() {
 
     // Close mobile nav when route changes
     React.useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- closing the sheet is a reaction to navigation (an external event), not a value derivable during render
         setOpen(false);
     }, [pathname]);
 
