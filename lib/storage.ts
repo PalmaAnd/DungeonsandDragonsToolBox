@@ -16,6 +16,16 @@ export const STORAGE_KEYS = {
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
 
+// Collision-resistant id for anything a user saves (campaigns, characters,
+// saved generator results, combatants, ...). Falls back for non-secure
+// contexts where crypto.randomUUID isn't available.
+export function generateId(): string {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
 const KNOWN_KEYS: string[] = Object.values(STORAGE_KEYS);
 
 export function loadFromStorage<T>(key: string, fallback: T): T {

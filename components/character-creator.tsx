@@ -37,7 +37,12 @@ import {
     calculateArmorClass,
     getDefaultSpells,
 } from "@/lib/character-calculations";
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
+import {
+    generateId,
+    loadFromStorage,
+    saveToStorage,
+    STORAGE_KEYS,
+} from "@/lib/storage";
 
 // Add the missing CharacterData type
 type CharacterData = {
@@ -299,7 +304,7 @@ const initialCharacterDraft: CharacterDraft = {
     traits: [],
 };
 
-type SavedCharacter = { id: number; character: CharacterDraft };
+type SavedCharacter = { id: string; character: CharacterDraft };
 
 export function CharacterCreator({
     enhancedData,
@@ -316,7 +321,7 @@ export function CharacterCreator({
     const [savedCharacters, setSavedCharacters] = useState<SavedCharacter[]>(
         []
     );
-    const [activeSavedId, setActiveSavedId] = useState<number | null>(null);
+    const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
 
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrating from localStorage on mount, not derivable during render (no SSR value to read)
@@ -335,7 +340,7 @@ export function CharacterCreator({
                 saved.id === activeSavedId ? { ...saved, character } : saved
             );
         } else {
-            const newId = Date.now();
+            const newId = generateId();
             updated = [...savedCharacters, { id: newId, character }];
             setActiveSavedId(newId);
         }
@@ -349,7 +354,7 @@ export function CharacterCreator({
         setActiveSavedId(saved.id);
     };
 
-    const deleteCharacter = (id: number) => {
+    const deleteCharacter = (id: string) => {
         const updated = savedCharacters.filter((saved) => saved.id !== id);
         setSavedCharacters(updated);
         saveToStorage(STORAGE_KEYS.savedCharacters, updated);

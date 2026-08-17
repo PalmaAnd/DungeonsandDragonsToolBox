@@ -32,7 +32,12 @@ import {
     Trash2,
 } from "lucide-react";
 import lootData from "@/data/loot-generator.json";
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
+import {
+    generateId,
+    loadFromStorage,
+    saveToStorage,
+    STORAGE_KEYS,
+} from "@/lib/storage";
 
 type LootItem = {
     name: string;
@@ -73,7 +78,7 @@ type LootSettings = {
     includeMagicItems: boolean;
 };
 
-type SavedLoot = Loot & { id: number };
+type SavedLoot = Loot & { id: string };
 
 const defaultSettings: LootSettings = {
     tier: "low",
@@ -120,12 +125,12 @@ export function LootGenerator() {
 
     const saveLoot = () => {
         if (!loot) return;
-        const updated = [...savedLoot, { ...loot, id: Date.now() }];
+        const updated = [...savedLoot, { ...loot, id: generateId() }];
         setSavedLoot(updated);
         saveToStorage(STORAGE_KEYS.savedLoot, updated);
     };
 
-    const deleteLoot = (id: number) => {
+    const deleteLoot = (id: string) => {
         const updated = savedLoot.filter((saved) => saved.id !== id);
         setSavedLoot(updated);
         saveToStorage(STORAGE_KEYS.savedLoot, updated);

@@ -24,26 +24,31 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Trash2 } from "lucide-react";
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
+import {
+    generateId,
+    loadFromStorage,
+    saveToStorage,
+    STORAGE_KEYS,
+} from "@/lib/storage";
 
 type Campaign = {
-    id: number;
+    id: string;
     name: string;
     description: string;
     lastPlayed: string;
-    characterIds: number[];
+    characterIds: string[];
 };
 
 type SavedCharacterSummary = {
-    id: number;
+    id: string;
     character: { name: string; class: string; level: number };
 };
 
 type CampaignForm = {
-    id: number | null;
+    id: string | null;
     name: string;
     description: string;
-    characterIds: number[];
+    characterIds: string[];
 };
 
 const emptyForm: CampaignForm = {
@@ -89,7 +94,7 @@ export function CampaignDashboard() {
         setFormOpen(true);
     };
 
-    const toggleCharacter = (characterId: number) => {
+    const toggleCharacter = (characterId: string) => {
         setForm((prev) => ({
             ...prev,
             characterIds: prev.characterIds.includes(characterId)
@@ -105,7 +110,7 @@ export function CampaignDashboard() {
             setCampaigns((prev) => [
                 ...prev,
                 {
-                    id: Date.now(),
+                    id: generateId(),
                     name: form.name,
                     description: form.description,
                     lastPlayed: "Never",
@@ -131,13 +136,13 @@ export function CampaignDashboard() {
         setForm(emptyForm);
     };
 
-    const deleteCampaign = (id: number) => {
+    const deleteCampaign = (id: string) => {
         setCampaigns((prev) => prev.filter((campaign) => campaign.id !== id));
         setFormOpen(false);
         setForm(emptyForm);
     };
 
-    const startSession = (id: number) => {
+    const startSession = (id: string) => {
         setCampaigns((prev) =>
             prev.map((campaign) =>
                 campaign.id === id
@@ -147,7 +152,7 @@ export function CampaignDashboard() {
         );
     };
 
-    const linkedCharacterNames = (characterIds: number[]) =>
+    const linkedCharacterNames = (characterIds: string[]) =>
         savedCharacters
             .filter((saved) => characterIds.includes(saved.id))
             .map((saved) => saved.character.name || "Unnamed");

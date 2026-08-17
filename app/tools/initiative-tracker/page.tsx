@@ -38,7 +38,12 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
+import {
+    generateId,
+    loadFromStorage,
+    saveToStorage,
+    STORAGE_KEYS,
+} from "@/lib/storage";
 
 type Condition = {
     name: string;
@@ -48,7 +53,7 @@ type Condition = {
 };
 
 type Combatant = {
-    id: number;
+    id: string;
     name: string;
     initiative: number;
     initiativeModifier: number;
@@ -168,15 +173,15 @@ export default function InitiativeTracker() {
     });
     const [currentTurn, setCurrentTurn] = useState(0);
     const [isCombatActive, setIsCombatActive] = useState(false);
-    const [hpChange, setHpChange] = useState<{ [key: number]: number }>({});
+    const [hpChange, setHpChange] = useState<{ [key: string]: number }>({});
     const [turnTimer, setTurnTimer] = useState(0);
     const [maxTurnTime, setMaxTurnTime] = useState(120); // 2 minutes default
     const [timerActive, setTimerActive] = useState(false);
     const [, setSelectedConditions] = useState<{
-        [key: number]: string[];
+        [key: string]: string[];
     }>({});
     const [showConditionDialog, setShowConditionDialog] = useState<
-        number | null
+        string | null
     >(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -266,7 +271,7 @@ export default function InitiativeTracker() {
         const exampleCombatants: Combatant[] = [
             // Player Characters
             {
-                id: 1001,
+                id: "1001",
                 name: "Lyra the Rogue",
                 initiative: 18,
                 initiativeModifier: 4,
@@ -279,7 +284,7 @@ export default function InitiativeTracker() {
                 conditions: ["poisoned"],
             },
             {
-                id: 1002,
+                id: "1002",
                 name: "Thorin Ironshield",
                 initiative: 14,
                 initiativeModifier: 1,
@@ -292,7 +297,7 @@ export default function InitiativeTracker() {
                 conditions: [],
             },
             {
-                id: 1003,
+                id: "1003",
                 name: "Mystic Elara",
                 initiative: 12,
                 initiativeModifier: 2,
@@ -306,7 +311,7 @@ export default function InitiativeTracker() {
             },
             // NPCs/Monsters
             {
-                id: 2001,
+                id: "2001",
                 name: "Orc Chieftain",
                 initiative: 16,
                 initiativeModifier: 1,
@@ -319,7 +324,7 @@ export default function InitiativeTracker() {
                 conditions: [],
             },
             {
-                id: 2002,
+                id: "2002",
                 name: "Orc Warrior #1",
                 initiative: 11,
                 initiativeModifier: 0,
@@ -332,7 +337,7 @@ export default function InitiativeTracker() {
                 conditions: ["frightened"],
             },
             {
-                id: 2003,
+                id: "2003",
                 name: "Orc Warrior #2",
                 initiative: 9,
                 initiativeModifier: 0,
@@ -345,7 +350,7 @@ export default function InitiativeTracker() {
                 conditions: [],
             },
             {
-                id: 2004,
+                id: "2004",
                 name: "Dire Wolf",
                 initiative: 15,
                 initiativeModifier: 2,
@@ -364,7 +369,7 @@ export default function InitiativeTracker() {
         );
 
         // Set up conditions
-        const conditionsMap: { [key: number]: string[] } = {};
+        const conditionsMap: { [key: string]: string[] } = {};
         exampleCombatants.forEach((combatant) => {
             if (combatant.conditions.length > 0) {
                 conditionsMap[combatant.id] = combatant.conditions;
@@ -377,7 +382,7 @@ export default function InitiativeTracker() {
         e.preventDefault();
         if (newCombatant.name && newCombatant.initiative) {
             const combatant: Combatant = {
-                id: Date.now(),
+                id: generateId(),
                 name: newCombatant.name,
                 initiative: Number(newCombatant.initiative),
                 initiativeModifier:
@@ -405,7 +410,7 @@ export default function InitiativeTracker() {
         }
     };
 
-    const removeCombatant = (id: number) => {
+    const removeCombatant = (id: string) => {
         setCombatants((prev) => prev.filter((c) => c.id !== id));
         // Clean up conditions
         setSelectedConditions((prev) => {
@@ -432,7 +437,7 @@ export default function InitiativeTracker() {
         setTurnTimer(0);
     };
 
-    const rollInitiative = (combatantId: number) => {
+    const rollInitiative = (combatantId: string) => {
         setCombatants((prev) =>
             prev
                 .map((c) => {
@@ -447,7 +452,7 @@ export default function InitiativeTracker() {
         );
     };
 
-    const addCondition = (combatantId: number, condition: string) => {
+    const addCondition = (combatantId: string, condition: string) => {
         setSelectedConditions((prev) => {
             const current = prev[combatantId] || [];
             if (!current.includes(condition)) {
@@ -475,7 +480,7 @@ export default function InitiativeTracker() {
         );
     };
 
-    const removeCondition = (combatantId: number, condition: string) => {
+    const removeCondition = (combatantId: string, condition: string) => {
         setSelectedConditions((prev) => {
             const current = prev[combatantId] || [];
             return {
@@ -499,7 +504,7 @@ export default function InitiativeTracker() {
         );
     };
 
-    const updateHP = (id: number, change: number) => {
+    const updateHP = (id: string, change: number) => {
         setCombatants((prev) =>
             prev.map((c) => {
                 if (c.id === id) {
@@ -522,7 +527,7 @@ export default function InitiativeTracker() {
         );
     };
 
-    const handleSaveThrow = (id: number, success: boolean) => {
+    const handleSaveThrow = (id: string, success: boolean) => {
         setCombatants((prev) =>
             prev.map((c) => {
                 if (c.id === id) {
@@ -541,7 +546,7 @@ export default function InitiativeTracker() {
         );
     };
 
-    const handleHpChange = (id: number, value: number) => {
+    const handleHpChange = (id: string, value: number) => {
         setHpChange((prev) => ({ ...prev, [id]: value }));
     };
 

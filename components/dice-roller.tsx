@@ -6,7 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
+import {
+    generateId,
+    loadFromStorage,
+    saveToStorage,
+    STORAGE_KEYS,
+} from "@/lib/storage";
 
 const MAX_STORED_ROLLS = 50;
 
@@ -56,10 +61,6 @@ const rollD100 = (): { result: number; tens: number; ones: number } => {
         tens: tensValue,
         ones: onesValue,
     };
-};
-
-const generateId = (): string => {
-    return Date.now().toString() + Math.random().toString(36).substr(2, 9);
 };
 
 export function DiceRoller() {

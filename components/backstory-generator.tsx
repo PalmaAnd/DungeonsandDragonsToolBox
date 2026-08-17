@@ -10,7 +10,12 @@ import {
     connections,
 } from "@/data/backstory-generator.json";
 import { Star, Heart, Shield, Users, Save, Trash2 } from "lucide-react";
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
+import {
+    generateId,
+    loadFromStorage,
+    saveToStorage,
+    STORAGE_KEYS,
+} from "@/lib/storage";
 
 interface Backstory {
     origin: {
@@ -35,7 +40,7 @@ function getRandomItem<T>(array: T[]): T {
     return array[Math.floor(Math.random() * array.length)];
 }
 
-type SavedBackstory = Backstory & { id: number };
+type SavedBackstory = Backstory & { id: string };
 
 export function BackstoryGenerator() {
     const [backstory, setBackstory] = useState<Backstory | null>(null);
@@ -52,12 +57,12 @@ export function BackstoryGenerator() {
 
     const saveBackstory = () => {
         if (!backstory) return;
-        const updated = [...savedBackstories, { ...backstory, id: Date.now() }];
+        const updated = [...savedBackstories, { ...backstory, id: generateId() }];
         setSavedBackstories(updated);
         saveToStorage(STORAGE_KEYS.savedBackstories, updated);
     };
 
-    const deleteBackstory = (id: number) => {
+    const deleteBackstory = (id: string) => {
         const updated = savedBackstories.filter((saved) => saved.id !== id);
         setSavedBackstories(updated);
         saveToStorage(STORAGE_KEYS.savedBackstories, updated);

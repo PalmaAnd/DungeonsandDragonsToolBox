@@ -14,7 +14,12 @@ import {
     Save,
     Trash2,
 } from "lucide-react";
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
+import {
+    generateId,
+    loadFromStorage,
+    saveToStorage,
+    STORAGE_KEYS,
+} from "@/lib/storage";
 
 type NPC = {
     name: string;
@@ -86,7 +91,7 @@ function generatePersonality(trait: string, quirk: string): string {
     return `${trait} in nature and ${getRandomItem(speechPatterns)}. ${quirk}.`;
 }
 
-type SavedNPC = NPC & { id: number };
+type SavedNPC = NPC & { id: string };
 
 export function NPCGenerator() {
     const [npc, setNPC] = useState<NPC | null>(null);
@@ -99,12 +104,12 @@ export function NPCGenerator() {
 
     const saveNpc = () => {
         if (!npc) return;
-        const updated = [...savedNpcs, { ...npc, id: Date.now() }];
+        const updated = [...savedNpcs, { ...npc, id: generateId() }];
         setSavedNpcs(updated);
         saveToStorage(STORAGE_KEYS.savedNpcs, updated);
     };
 
-    const deleteNpc = (id: number) => {
+    const deleteNpc = (id: string) => {
         const updated = savedNpcs.filter((saved) => saved.id !== id);
         setSavedNpcs(updated);
         saveToStorage(STORAGE_KEYS.savedNpcs, updated);
