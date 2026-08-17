@@ -45,13 +45,17 @@ export default function WeatherGenerator() {
     const [temperature, setTemperature] = useState<number | null>(defaultWeatherState.temperature)
 
     useEffect(() => {
-        const saved = loadFromStorage<WeatherState>(STORAGE_KEYS.weatherState, defaultWeatherState)
-        /* eslint-disable react-hooks/set-state-in-effect -- hydrating from localStorage on mount, not derivable during render (no SSR value to read) */
-        setClimate(saved.climate)
-        setSeason(saved.season)
-        setWeather(saved.weather)
-        setTemperature(saved.temperature)
-        /* eslint-enable react-hooks/set-state-in-effect */
+        let cancelled = false
+        loadFromStorage<WeatherState>(STORAGE_KEYS.weatherState, defaultWeatherState).then((saved) => {
+            if (cancelled) return
+            setClimate(saved.climate)
+            setSeason(saved.season)
+            setWeather(saved.weather)
+            setTemperature(saved.temperature)
+        })
+        return () => {
+            cancelled = true
+        }
     }, [])
 
     useEffect(() => {

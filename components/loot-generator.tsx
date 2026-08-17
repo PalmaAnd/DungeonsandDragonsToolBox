@@ -101,17 +101,24 @@ export function LootGenerator() {
     const [savedLoot, setSavedLoot] = useState<SavedLoot[]>([]);
 
     useEffect(() => {
-        const settings = loadFromStorage<LootSettings>(
-            STORAGE_KEYS.lootSettings,
-            defaultSettings
-        );
-        /* eslint-disable react-hooks/set-state-in-effect -- hydrating from localStorage on mount, not derivable during render (no SSR value to read) */
-        setTier(settings.tier);
-        setIncludeGems(settings.includeGems);
-        setIncludeArtObjects(settings.includeArtObjects);
-        setIncludeMagicItems(settings.includeMagicItems);
-        setSavedLoot(loadFromStorage(STORAGE_KEYS.savedLoot, []));
-        /* eslint-enable react-hooks/set-state-in-effect */
+        let cancelled = false;
+        Promise.all([
+            loadFromStorage<LootSettings>(
+                STORAGE_KEYS.lootSettings,
+                defaultSettings
+            ),
+            loadFromStorage<SavedLoot[]>(STORAGE_KEYS.savedLoot, []),
+        ]).then(([settings, savedLootResult]) => {
+            if (cancelled) return;
+            setTier(settings.tier);
+            setIncludeGems(settings.includeGems);
+            setIncludeArtObjects(settings.includeArtObjects);
+            setIncludeMagicItems(settings.includeMagicItems);
+            setSavedLoot(savedLootResult);
+        });
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     useEffect(() => {

@@ -117,8 +117,15 @@ export default function TavernGenerator() {
     );
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrating from localStorage on mount, not derivable during render (no SSR value to read)
-        setSavedTaverns(loadFromStorage(STORAGE_KEYS.savedTaverns, []));
+        let cancelled = false;
+        loadFromStorage<Tavern[]>(STORAGE_KEYS.savedTaverns, []).then(
+            (stored) => {
+                if (!cancelled) setSavedTaverns(stored);
+            }
+        );
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     const generateTavern = () => {

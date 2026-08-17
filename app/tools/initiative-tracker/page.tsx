@@ -187,18 +187,20 @@ export default function InitiativeTracker() {
 
     // Restore a saved encounter on initial load (never auto-resume a running timer)
     useEffect(() => {
-        const saved = loadFromStorage<EncounterState | null>(
+        let cancelled = false;
+        loadFromStorage<EncounterState | null>(
             STORAGE_KEYS.initiativeEncounter,
             null
-        );
-        if (saved) {
-            /* eslint-disable react-hooks/set-state-in-effect -- hydrating from localStorage on mount, not derivable during render (no SSR value to read) */
+        ).then((saved) => {
+            if (cancelled || !saved) return;
             setCombatants(saved.combatants);
             setCurrentTurn(saved.currentTurn);
             setIsCombatActive(saved.isCombatActive);
             setMaxTurnTime(saved.maxTurnTime);
-            /* eslint-enable react-hooks/set-state-in-effect */
-        }
+        });
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     // Persist the encounter as it changes

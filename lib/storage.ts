@@ -1,4 +1,8 @@
-// Shared localStorage layer: namespaced keys + typed load/save + full-data export/import.
+// Shared storage layer: namespaced keys + a swappable, async adapter behind
+// typed load/save + full-data export/import. localStorage is the only
+// adapter implemented today, but every call site consumes the async API so
+// a future real-backend adapter can be swapped in via setStorageAdapter()
+// without touching any of them.
 
 export const STORAGE_KEYS = {
     diceRolls: "dnd-toolbox:dice-rolls",
@@ -16,6 +20,8 @@ export const STORAGE_KEYS = {
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
 
+const KNOWN_KEYS: string[] = Object.values(STORAGE_KEYS);
+
 // Collision-resistant id for anything a user saves (campaigns, characters,
 // saved generator results, combatants, ...). Falls back for non-secure
 // contexts where crypto.randomUUID isn't available.
@@ -26,29 +32,55 @@ export function generateId(): string {
     return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-const KNOWN_KEYS: string[] = Object.values(STORAGE_KEYS);
-
-export function loadFromStorage<T>(key: string, fallback: T): T {
-    if (typeof window === "undefined") return fallback;
-
-    const raw = window.localStorage.getItem(key);
-    if (raw === null) return fallback;
-
-    try {
-        return JSON.parse(raw) as T;
-    } catch {
-        return fallback;
-    }
+export interface StorageAdapter {
+    load<T>(key: string, fallback: T): Promise<T>;
+    save<T>(key: string, value: T): Promise<void>;
+    remove(key: string): Promise<void>;
 }
 
-export function saveToStorage<T>(key: string, value: T): void {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(key, JSON.stringify(value));
+export const localStorageAdapter: StorageAdapter = {
+    async load<T>(key: string, fallback: T): Promise<T> {
+        if (typeof window === "undefined") return fallback;
+
+        const raw = window.localStorage.getItem(key);
+        if (raw === null) return fallback;
+
+        try {
+            return JSON.parse(raw) as T;
+        } catch {
+            return fallback;
+        }
+    },
+
+    async save<T>(key: string, value: T): Promise<void> {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem(key, JSON.stringify(value));
+    },
+
+    async remove(key: string): Promise<void> {
+        if (typeof window === "undefined") return;
+        window.localStorage.removeItem(key);
+    },
+};
+
+let activeAdapter: StorageAdapter = localStorageAdapter;
+
+// Swap the backing store app-wide (e.g. to a real API-backed adapter) in one
+// place, at startup, with no changes required in any tool component.
+export function setStorageAdapter(adapter: StorageAdapter): void {
+    activeAdapter = adapter;
 }
 
-export function removeFromStorage(key: string): void {
-    if (typeof window === "undefined") return;
-    window.localStorage.removeItem(key);
+export function loadFromStorage<T>(key: string, fallback: T): Promise<T> {
+    return activeAdapter.load(key, fallback);
+}
+
+export function saveToStorage<T>(key: string, value: T): Promise<void> {
+    return activeAdapter.save(key, value);
+}
+
+export function removeFromStorage(key: string): Promise<void> {
+    return activeAdapter.remove(key);
 }
 
 export type ExportPayload = {
@@ -57,18 +89,15 @@ export type ExportPayload = {
     data: Record<string, unknown>;
 };
 
-export function exportAllData(): ExportPayload {
+const MISSING = Symbol("missing");
+
+export async function exportAllData(): Promise<ExportPayload> {
     const data: Record<string, unknown> = {};
 
-    if (typeof window !== "undefined") {
-        for (const key of KNOWN_KEYS) {
-            const raw = window.localStorage.getItem(key);
-            if (raw === null) continue;
-            try {
-                data[key] = JSON.parse(raw);
-            } catch {
-                // skip corrupted entries rather than failing the whole export
-            }
+    for (const key of KNOWN_KEYS) {
+        const value = await activeAdapter.load(key, MISSING);
+        if (value !== MISSING) {
+            data[key] = value;
         }
     }
 
@@ -79,10 +108,10 @@ export function exportAllData(): ExportPayload {
     };
 }
 
-export function downloadExportedData(filename?: string): void {
+export async function downloadExportedData(filename?: string): Promise<void> {
     if (typeof window === "undefined") return;
 
-    const payload = exportAllData();
+    const payload = await exportAllData();
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
         type: "application/json",
     });
@@ -100,11 +129,7 @@ export function downloadExportedData(filename?: string): void {
 
 export type ImportResult = { ok: true } | { ok: false; error: string };
 
-export function importAllData(payload: unknown): ImportResult {
-    if (typeof window === "undefined") {
-        return { ok: false, error: "Import is only available in the browser." };
-    }
-
+export async function importAllData(payload: unknown): Promise<ImportResult> {
     if (
         typeof payload !== "object" ||
         payload === null ||
@@ -123,7 +148,7 @@ export function importAllData(payload: unknown): ImportResult {
 
     for (const [key, value] of Object.entries(data)) {
         if (!KNOWN_KEYS.includes(key)) continue;
-        window.localStorage.setItem(key, JSON.stringify(value));
+        await activeAdapter.save(key, value);
         importedCount += 1;
     }
 

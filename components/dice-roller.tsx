@@ -68,17 +68,21 @@ export function DiceRoller() {
     const [customRoll, setCustomRoll] = useState("");
 
     useEffect(() => {
-        const stored = loadFromStorage<StoredRollResult[]>(
-            STORAGE_KEYS.diceRolls,
-            []
+        let cancelled = false;
+        loadFromStorage<StoredRollResult[]>(STORAGE_KEYS.diceRolls, []).then(
+            (stored) => {
+                if (cancelled) return;
+                setRolls(
+                    stored.map((roll) => ({
+                        ...roll,
+                        timestamp: new Date(roll.timestamp),
+                    }))
+                );
+            }
         );
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrating from localStorage on mount, not derivable during render (no SSR value to read)
-        setRolls(
-            stored.map((roll) => ({
-                ...roll,
-                timestamp: new Date(roll.timestamp),
-            }))
-        );
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     useEffect(() => {

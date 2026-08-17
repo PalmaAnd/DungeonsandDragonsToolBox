@@ -376,20 +376,23 @@ export function ShopGenerator({ itemsData }: ShopGeneratorProps) {
 
     // Restore a saved shop on initial load, otherwise generate a fresh one
     useEffect(() => {
-        const saved = loadFromStorage<ShopState | null>(
-            STORAGE_KEYS.shopState,
-            null
+        let cancelled = false;
+        loadFromStorage<ShopState | null>(STORAGE_KEYS.shopState, null).then(
+            (saved) => {
+                if (cancelled) return;
+                if (saved) {
+                    setShopDetails(saved.shopDetails);
+                    setInventory(saved.inventory);
+                    setShopStatus(saved.shopStatus);
+                    setCart(saved.cart);
+                } else if (itemsData) {
+                    generateShop();
+                }
+            }
         );
-        if (saved) {
-            /* eslint-disable react-hooks/set-state-in-effect -- hydrating from localStorage on mount, not derivable during render (no SSR value to read) */
-            setShopDetails(saved.shopDetails);
-            setInventory(saved.inventory);
-            setShopStatus(saved.shopStatus);
-            setCart(saved.cart);
-            /* eslint-enable react-hooks/set-state-in-effect */
-        } else if (itemsData) {
-            generateShop();
-        }
+        return () => {
+            cancelled = true;
+        };
     }, [itemsData]);
 
     // Persist the shop, inventory, status and cart as they change

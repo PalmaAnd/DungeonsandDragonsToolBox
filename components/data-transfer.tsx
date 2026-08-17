@@ -34,10 +34,10 @@ export function DataTransfer() {
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
             try {
                 const parsed = JSON.parse(event.target?.result as string);
-                const result = importAllData(parsed);
+                const result = await importAllData(parsed);
                 if (result.ok) {
                     showFeedback("Data imported. Reloading…");
                     window.location.reload();

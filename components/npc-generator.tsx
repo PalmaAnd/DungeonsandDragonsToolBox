@@ -98,8 +98,16 @@ export function NPCGenerator() {
     const [savedNpcs, setSavedNpcs] = useState<SavedNPC[]>([]);
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrating from localStorage on mount, not derivable during render (no SSR value to read)
-        setSavedNpcs(loadFromStorage(STORAGE_KEYS.savedNpcs, []));
+        let cancelled = false;
+        loadFromStorage<SavedNPC[]>(STORAGE_KEYS.savedNpcs, []).then(
+            (stored) => {
+                if (cancelled) return;
+                setSavedNpcs(stored);
+            }
+        );
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     const saveNpc = () => {

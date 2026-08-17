@@ -326,8 +326,16 @@ export function CharacterCreator({
     const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrating from localStorage on mount, not derivable during render (no SSR value to read)
-        setSavedCharacters(loadFromStorage(STORAGE_KEYS.savedCharacters, []));
+        let cancelled = false;
+        loadFromStorage<SavedCharacter[]>(
+            STORAGE_KEYS.savedCharacters,
+            []
+        ).then((stored) => {
+            if (!cancelled) setSavedCharacters(stored);
+        });
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     const saveCharacter = () => {
