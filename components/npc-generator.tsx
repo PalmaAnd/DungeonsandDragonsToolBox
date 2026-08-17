@@ -20,6 +20,7 @@ import {
     saveToStorage,
     STORAGE_KEYS,
 } from "@/lib/storage";
+import { AddToCampaignButton } from "@/components/add-to-campaign-button";
 
 type NPC = {
     name: string;
@@ -344,14 +345,20 @@ export function NPCGenerator() {
                                         {saved.occupation}
                                     </p>
                                 </button>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    aria-label="Delete saved NPC"
-                                    onClick={() => deleteNpc(saved.id)}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <div className="flex items-center">
+                                    <AddToCampaignButton
+                                        field="npcIds"
+                                        entityId={saved.id}
+                                    />
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        aria-label="Delete saved NPC"
+                                        onClick={() => deleteNpc(saved.id)}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </CardHeader>
                         </Card>
                     ))}

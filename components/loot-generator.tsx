@@ -38,6 +38,7 @@ import {
     saveToStorage,
     STORAGE_KEYS,
 } from "@/lib/storage";
+import { AddToCampaignButton } from "@/components/add-to-campaign-button";
 
 type LootItem = {
     name: string;
@@ -717,14 +718,20 @@ export function LootGenerator() {
                                         {saved.items.length === 1 ? "" : "s"}
                                     </p>
                                 </button>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    aria-label="Delete saved loot"
-                                    onClick={() => deleteLoot(saved.id)}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <div className="flex items-center">
+                                    <AddToCampaignButton
+                                        field="lootIds"
+                                        entityId={saved.id}
+                                    />
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        aria-label="Delete saved loot"
+                                        onClick={() => deleteLoot(saved.id)}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </CardHeader>
                         </Card>
                     ))}

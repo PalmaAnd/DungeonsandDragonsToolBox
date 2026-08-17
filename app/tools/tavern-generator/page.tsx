@@ -17,7 +17,13 @@ import {
     Trash2,
 } from "lucide-react";
 import { generateTavernName, generateNpcName } from "@/lib/generator";
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
+import {
+    generateId,
+    loadFromStorage,
+    saveToStorage,
+    STORAGE_KEYS,
+} from "@/lib/storage";
+import { AddToCampaignButton } from "@/components/add-to-campaign-button";
 
 const atmospheres = [
     "Cozy",
@@ -98,6 +104,7 @@ function getRandomItem<T>(array: T[]): T {
 }
 
 type Tavern = {
+    id: string;
     name: string;
     type: string;
     atmosphere: string;
@@ -109,6 +116,23 @@ type Tavern = {
     reputation: string;
 };
 
+// Older saved taverns predate ids -- assign one on load so linking to a
+// campaign has something stable to reference.
+function normalizeTavern(raw: Partial<Tavern>): Tavern {
+    return {
+        id: raw.id ?? generateId(),
+        name: raw.name ?? "",
+        type: raw.type ?? "",
+        atmosphere: raw.atmosphere ?? "",
+        specialty: raw.specialty ?? "",
+        entertainment: raw.entertainment ?? "",
+        patronCount: raw.patronCount ?? 0,
+        owner: raw.owner ?? "",
+        location: raw.location ?? "",
+        reputation: raw.reputation ?? "",
+    };
+}
+
 export default function TavernGenerator() {
     const [tavern, setTavern] = useState<Tavern | null>(null);
     const [savedTaverns, setSavedTaverns] = useState<Tavern[]>([]);
@@ -118,9 +142,12 @@ export default function TavernGenerator() {
 
     useEffect(() => {
         let cancelled = false;
-        loadFromStorage<Tavern[]>(STORAGE_KEYS.savedTaverns, []).then(
+        loadFromStorage<Partial<Tavern>[]>(STORAGE_KEYS.savedTaverns, []).then(
             (stored) => {
-                if (!cancelled) setSavedTaverns(stored);
+                if (cancelled) return;
+                const normalized = stored.map(normalizeTavern);
+                setSavedTaverns(normalized);
+                saveToStorage(STORAGE_KEYS.savedTaverns, normalized);
             }
         );
         return () => {
@@ -130,6 +157,7 @@ export default function TavernGenerator() {
 
     const generateTavern = () => {
         setTavern({
+            id: generateId(),
             name: generateTavernName(),
             type: getRandomItem(tavernTypes),
             atmosphere: getRandomItem(atmospheres),
@@ -150,8 +178,8 @@ export default function TavernGenerator() {
         }
     };
 
-    const deleteTavern = (index: number) => {
-        const updatedTaverns = savedTaverns.filter((_, i) => i !== index);
+    const deleteTavern = (id: string) => {
+        const updatedTaverns = savedTaverns.filter((t) => t.id !== id);
         setSavedTaverns(updatedTaverns);
         saveToStorage(STORAGE_KEYS.savedTaverns, updatedTaverns);
     };
@@ -228,20 +256,26 @@ export default function TavernGenerator() {
                 <div className="mt-8">
                     <h2 className="text-2xl font-bold mb-4">Saved Taverns</h2>
                     {savedTaverns.map((savedTavern, index) => (
-                        <Card key={index} className="mb-4">
+                        <Card key={savedTavern.id} className="mb-4">
                             <CardHeader
                                 className="cursor-pointer flex justify-between items-center"
                                 onClick={() => toggleExpand(index)}
                             >
                                 <CardTitle>{savedTavern.name}</CardTitle>
                                 <div className="flex items-center gap-2">
+                                    <span onClick={(e) => e.stopPropagation()}>
+                                        <AddToCampaignButton
+                                            field="tavernIds"
+                                            entityId={savedTavern.id}
+                                        />
+                                    </span>
                                     <Button
                                         variant="ghost"
                                         size="icon"
                                         aria-label="Delete tavern"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            deleteTavern(index);
+                                            deleteTavern(savedTavern.id);
                                         }}
                                     >
                                         <Trash2 className="h-4 w-4" />
