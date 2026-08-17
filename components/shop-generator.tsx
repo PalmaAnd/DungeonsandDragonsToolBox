@@ -23,6 +23,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Store, User, Package, Coins, RefreshCw } from "lucide-react";
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
 
 // Define types
 type ShopStatus = "poor" | "modest" | "prosperous" | "wealthy" | "luxurious";
@@ -202,6 +203,13 @@ const adjustItemPrice = (item: Item, priceModifier: number): number => {
     return Math.round(item.basePrice * priceModifier * randomFactor);
 };
 
+type ShopState = {
+    shopDetails: ShopDetails;
+    inventory: Item[];
+    shopStatus: ShopStatus;
+    cart: Item[];
+};
+
 export function ShopGenerator({ itemsData }: ShopGeneratorProps) {
     const [shopDetails, setShopDetails] = useState<ShopDetails | null>(null);
     const [inventory, setInventory] = useState<Item[]>([]);
@@ -366,12 +374,32 @@ export function ShopGenerator({ itemsData }: ShopGeneratorProps) {
         }
     };
 
-    // Generate shop on initial load
+    // Restore a saved shop on initial load, otherwise generate a fresh one
     useEffect(() => {
-        if (itemsData) {
+        const saved = loadFromStorage<ShopState | null>(
+            STORAGE_KEYS.shopState,
+            null
+        );
+        if (saved) {
+            setShopDetails(saved.shopDetails);
+            setInventory(saved.inventory);
+            setShopStatus(saved.shopStatus);
+            setCart(saved.cart);
+        } else if (itemsData) {
             generateShop();
         }
     }, [itemsData]);
+
+    // Persist the shop, inventory, status and cart as they change
+    useEffect(() => {
+        if (!shopDetails) return;
+        saveToStorage(STORAGE_KEYS.shopState, {
+            shopDetails,
+            inventory,
+            shopStatus,
+            cart,
+        });
+    }, [shopDetails, inventory, shopStatus, cart]);
 
     const getStatusLabel = (status: ShopStatus) => {
         switch (status) {

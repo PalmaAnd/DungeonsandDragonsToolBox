@@ -14,8 +14,10 @@ import {
     Star,
     ChevronDown,
     ChevronUp,
+    Trash2,
 } from "lucide-react";
 import { generateTavernName, generateNpcName } from "@/lib/generator";
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
 
 const atmospheres = [
     "Cozy",
@@ -95,42 +97,27 @@ function getRandomItem<T>(array: T[]): T {
     return array[Math.floor(Math.random() * array.length)];
 }
 
+type Tavern = {
+    name: string;
+    type: string;
+    atmosphere: string;
+    specialty: string;
+    entertainment: string;
+    patronCount: number;
+    owner: string;
+    location: string;
+    reputation: string;
+};
+
 export default function TavernGenerator() {
-    const [tavern, setTavern] = useState<{
-        name: string;
-        type: string;
-        atmosphere: string;
-        specialty: string;
-        entertainment: string;
-        patronCount: number;
-        owner: string;
-        location: string;
-        reputation: string;
-    } | null>(null);
-
-    const [savedTaverns, setSavedTaverns] = useState<
-        {
-            name: string;
-            type: string;
-            atmosphere: string;
-            specialty: string;
-            entertainment: string;
-            patronCount: number;
-            owner: string;
-            location: string;
-            reputation: string;
-        }[]
-    >([]);
-
+    const [tavern, setTavern] = useState<Tavern | null>(null);
+    const [savedTaverns, setSavedTaverns] = useState<Tavern[]>([]);
     const [expandedTaverns, setExpandedTaverns] = useState<Set<number>>(
         new Set()
     );
 
     useEffect(() => {
-        const storedTaverns = localStorage.getItem("savedTaverns");
-        if (storedTaverns) {
-            setSavedTaverns(JSON.parse(storedTaverns));
-        }
+        setSavedTaverns(loadFromStorage(STORAGE_KEYS.savedTaverns, []));
     }, []);
 
     const generateTavern = () => {
@@ -151,11 +138,14 @@ export default function TavernGenerator() {
         if (tavern) {
             const updatedTaverns = [...savedTaverns, tavern];
             setSavedTaverns(updatedTaverns);
-            localStorage.setItem(
-                "savedTaverns",
-                JSON.stringify(updatedTaverns)
-            );
+            saveToStorage(STORAGE_KEYS.savedTaverns, updatedTaverns);
         }
+    };
+
+    const deleteTavern = (index: number) => {
+        const updatedTaverns = savedTaverns.filter((_, i) => i !== index);
+        setSavedTaverns(updatedTaverns);
+        saveToStorage(STORAGE_KEYS.savedTaverns, updatedTaverns);
     };
 
     const toggleExpand = (index: number) => {
@@ -236,11 +226,24 @@ export default function TavernGenerator() {
                                 onClick={() => toggleExpand(index)}
                             >
                                 <CardTitle>{savedTavern.name}</CardTitle>
-                                {expandedTaverns.has(index) ? (
-                                    <ChevronUp className="h-5 w-5" />
-                                ) : (
-                                    <ChevronDown className="h-5 w-5" />
-                                )}
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        aria-label="Delete tavern"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            deleteTavern(index);
+                                        }}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                    {expandedTaverns.has(index) ? (
+                                        <ChevronUp className="h-5 w-5" />
+                                    ) : (
+                                        <ChevronDown className="h-5 w-5" />
+                                    )}
+                                </div>
                             </CardHeader>
                             {expandedTaverns.has(index) && (
                                 <CardContent className="space-y-4">

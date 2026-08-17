@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -9,7 +9,8 @@ import {
     events,
     connections,
 } from "@/data/backstory-generator.json";
-import { Star, Heart, Shield, Users } from "lucide-react";
+import { Star, Heart, Shield, Users, Save, Trash2 } from "lucide-react";
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
 
 interface Backstory {
     origin: {
@@ -34,8 +35,32 @@ function getRandomItem<T>(array: T[]): T {
     return array[Math.floor(Math.random() * array.length)];
 }
 
+type SavedBackstory = Backstory & { id: number };
+
 export function BackstoryGenerator() {
     const [backstory, setBackstory] = useState<Backstory | null>(null);
+    const [savedBackstories, setSavedBackstories] = useState<
+        SavedBackstory[]
+    >([]);
+
+    useEffect(() => {
+        setSavedBackstories(
+            loadFromStorage(STORAGE_KEYS.savedBackstories, [])
+        );
+    }, []);
+
+    const saveBackstory = () => {
+        if (!backstory) return;
+        const updated = [...savedBackstories, { ...backstory, id: Date.now() }];
+        setSavedBackstories(updated);
+        saveToStorage(STORAGE_KEYS.savedBackstories, updated);
+    };
+
+    const deleteBackstory = (id: number) => {
+        const updated = savedBackstories.filter((saved) => saved.id !== id);
+        setSavedBackstories(updated);
+        saveToStorage(STORAGE_KEYS.savedBackstories, updated);
+    };
 
     const generateBackstory = () => {
         setBackstory({
@@ -48,7 +73,17 @@ export function BackstoryGenerator() {
 
     return (
         <div className="space-y-6">
-            <Button onClick={generateBackstory}>Generate Backstory</Button>
+            <div className="flex flex-wrap gap-2">
+                <Button onClick={generateBackstory}>
+                    Generate Backstory
+                </Button>
+                {backstory && (
+                    <Button onClick={saveBackstory} variant="outline">
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Backstory
+                    </Button>
+                )}
+            </div>
             {backstory && (
                 <Card>
                     <CardHeader>
@@ -111,6 +146,34 @@ export function BackstoryGenerator() {
                         </div>
                     </CardContent>
                 </Card>
+            )}
+
+            {savedBackstories.length > 0 && (
+                <div className="space-y-2">
+                    <h2 className="text-xl font-bold">Saved Backstories</h2>
+                    {savedBackstories.map((saved) => (
+                        <Card key={saved.id}>
+                            <CardHeader className="flex flex-row items-center justify-between py-3">
+                                <button
+                                    className="text-left"
+                                    onClick={() => setBackstory(saved)}
+                                >
+                                    <CardTitle className="text-base">
+                                        {saved.origin.text}
+                                    </CardTitle>
+                                </button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="Delete saved backstory"
+                                    onClick={() => deleteBackstory(saved.id)}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </CardHeader>
+                        </Card>
+                    ))}
+                </div>
             )}
         </div>
     );

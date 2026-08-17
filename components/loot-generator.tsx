@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -28,8 +28,11 @@ import {
     Palette,
     RefreshCw,
     Sparkles,
+    Save,
+    Trash2,
 } from "lucide-react";
 import lootData from "@/data/loot-generator.json";
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
 
 type LootItem = {
     name: string;
@@ -63,13 +66,68 @@ function getRandomGold(min: number, max: number): number {
     return getRandomInt(min, max);
 }
 
+type LootSettings = {
+    tier: string;
+    includeGems: boolean;
+    includeArtObjects: boolean;
+    includeMagicItems: boolean;
+};
+
+type SavedLoot = Loot & { id: number };
+
+const defaultSettings: LootSettings = {
+    tier: "low",
+    includeGems: true,
+    includeArtObjects: true,
+    includeMagicItems: true,
+};
+
 export function LootGenerator() {
     const [loot, setLoot] = useState<Loot | null>(null);
-    const [tier, setTier] = useState<string>("low");
+    const [tier, setTier] = useState<string>(defaultSettings.tier);
     const [isLoading, setIsLoading] = useState(false);
-    const [includeGems, setIncludeGems] = useState(true);
-    const [includeArtObjects, setIncludeArtObjects] = useState(true);
-    const [includeMagicItems, setIncludeMagicItems] = useState(true);
+    const [includeGems, setIncludeGems] = useState(defaultSettings.includeGems);
+    const [includeArtObjects, setIncludeArtObjects] = useState(
+        defaultSettings.includeArtObjects
+    );
+    const [includeMagicItems, setIncludeMagicItems] = useState(
+        defaultSettings.includeMagicItems
+    );
+    const [savedLoot, setSavedLoot] = useState<SavedLoot[]>([]);
+
+    useEffect(() => {
+        const settings = loadFromStorage<LootSettings>(
+            STORAGE_KEYS.lootSettings,
+            defaultSettings
+        );
+        setTier(settings.tier);
+        setIncludeGems(settings.includeGems);
+        setIncludeArtObjects(settings.includeArtObjects);
+        setIncludeMagicItems(settings.includeMagicItems);
+        setSavedLoot(loadFromStorage(STORAGE_KEYS.savedLoot, []));
+    }, []);
+
+    useEffect(() => {
+        saveToStorage(STORAGE_KEYS.lootSettings, {
+            tier,
+            includeGems,
+            includeArtObjects,
+            includeMagicItems,
+        });
+    }, [tier, includeGems, includeArtObjects, includeMagicItems]);
+
+    const saveLoot = () => {
+        if (!loot) return;
+        const updated = [...savedLoot, { ...loot, id: Date.now() }];
+        setSavedLoot(updated);
+        saveToStorage(STORAGE_KEYS.savedLoot, updated);
+    };
+
+    const deleteLoot = (id: number) => {
+        const updated = savedLoot.filter((saved) => saved.id !== id);
+        setSavedLoot(updated);
+        saveToStorage(STORAGE_KEYS.savedLoot, updated);
+    };
 
     const generateLoot = () => {
         setIsLoading(true);
@@ -280,14 +338,24 @@ export function LootGenerator() {
                 </div>
                 <div className="flex gap-2">
                     {loot && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setLoot(null)}
-                        >
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Reset
-                        </Button>
+                        <>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={saveLoot}
+                            >
+                                <Save className="h-4 w-4 mr-2" />
+                                Save Loot
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setLoot(null)}
+                            >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Reset
+                            </Button>
+                        </>
                     )}
                 </div>
             </div>
@@ -615,6 +683,38 @@ export function LootGenerator() {
                         </Tabs>
                     </CardContent>
                 </Card>
+            )}
+
+            {savedLoot.length > 0 && (
+                <div className="space-y-2">
+                    <h2 className="text-xl font-bold">Saved Loot</h2>
+                    {savedLoot.map((saved) => (
+                        <Card key={saved.id}>
+                            <CardHeader className="flex flex-row items-center justify-between py-3">
+                                <button
+                                    className="text-left"
+                                    onClick={() => setLoot(saved)}
+                                >
+                                    <CardTitle className="text-base">
+                                        {saved.gold} gp in a {saved.container}
+                                    </CardTitle>
+                                    <p className="text-sm text-muted-foreground">
+                                        {saved.items.length} item
+                                        {saved.items.length === 1 ? "" : "s"}
+                                    </p>
+                                </button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="Delete saved loot"
+                                    onClick={() => deleteLoot(saved.id)}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </CardHeader>
+                        </Card>
+                    ))}
+                </div>
             )}
         </div>
     );

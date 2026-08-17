@@ -38,6 +38,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
 
 type Condition = {
     name: string;
@@ -58,6 +59,13 @@ type Combatant = {
     savingThrows: number;
     failedSaves: number;
     conditions: string[];
+};
+
+type EncounterState = {
+    combatants: Combatant[];
+    currentTurn: number;
+    isCombatActive: boolean;
+    maxTurnTime: number;
 };
 
 const CONDITIONS: Record<string, Condition> = {
@@ -171,6 +179,37 @@ export default function InitiativeTracker() {
         number | null
     >(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Restore a saved encounter on initial load (never auto-resume a running timer)
+    useEffect(() => {
+        const saved = loadFromStorage<EncounterState | null>(
+            STORAGE_KEYS.initiativeEncounter,
+            null
+        );
+        if (saved) {
+            setCombatants(saved.combatants);
+            setCurrentTurn(saved.currentTurn);
+            setIsCombatActive(saved.isCombatActive);
+            setMaxTurnTime(saved.maxTurnTime);
+        }
+    }, []);
+
+    // Persist the encounter as it changes
+    useEffect(() => {
+        saveToStorage(STORAGE_KEYS.initiativeEncounter, {
+            combatants,
+            currentTurn,
+            isCombatActive,
+            maxTurnTime,
+        });
+    }, [combatants, currentTurn, isCombatActive, maxTurnTime]);
+
+    const clearSavedEncounter = () => {
+        setCombatants([]);
+        setCurrentTurn(0);
+        setIsCombatActive(false);
+        setTimerActive(false);
+    };
 
     // Timer effect
     useEffect(() => {
@@ -508,10 +547,18 @@ export default function InitiativeTracker() {
         <div className="container mx-auto px-4 py-8">
             <div className="flex items-center justify-between mb-6">
                 <h1 className="text-3xl font-bold">Initiative Tracker</h1>
-                <Button onClick={loadExampleFight} variant="outline">
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Show Example Fight
-                </Button>
+                <div className="flex gap-2">
+                    {combatants.length > 0 && (
+                        <Button onClick={clearSavedEncounter} variant="outline">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Clear Saved Encounter
+                        </Button>
+                    )}
+                    <Button onClick={loadExampleFight} variant="outline">
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Show Example Fight
+                    </Button>
+                </div>
             </div>
 
             {/* Combat Timer Controls */}

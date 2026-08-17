@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Wind } from 'lucide-react'
 import React from 'react'
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage"
 
 type Climate = 'temperate' | 'tropical' | 'arid' | 'arctic'
 type Season = 'spring' | 'summer' | 'autumn' | 'winter'
@@ -23,11 +24,37 @@ const weatherTypes = {
     windy: { icon: Wind, label: 'Windy' },
 }
 
+type WeatherState = {
+    climate: Climate
+    season: Season
+    weather: keyof typeof weatherTypes | null
+    temperature: number | null
+}
+
+const defaultWeatherState: WeatherState = {
+    climate: 'temperate',
+    season: 'spring',
+    weather: null,
+    temperature: null,
+}
+
 export default function WeatherGenerator() {
-    const [climate, setClimate] = useState<Climate>('temperate')
-    const [season, setSeason] = useState<Season>('spring')
-    const [weather, setWeather] = useState<keyof typeof weatherTypes | null>(null)
-    const [temperature, setTemperature] = useState<number | null>(null)
+    const [climate, setClimate] = useState<Climate>(defaultWeatherState.climate)
+    const [season, setSeason] = useState<Season>(defaultWeatherState.season)
+    const [weather, setWeather] = useState<keyof typeof weatherTypes | null>(defaultWeatherState.weather)
+    const [temperature, setTemperature] = useState<number | null>(defaultWeatherState.temperature)
+
+    useEffect(() => {
+        const saved = loadFromStorage<WeatherState>(STORAGE_KEYS.weatherState, defaultWeatherState)
+        setClimate(saved.climate)
+        setSeason(saved.season)
+        setWeather(saved.weather)
+        setTemperature(saved.temperature)
+    }, [])
+
+    useEffect(() => {
+        saveToStorage(STORAGE_KEYS.weatherState, { climate, season, weather, temperature })
+    }, [climate, season, weather, temperature])
 
     const generateWeather = () => {
         let possibleWeather: (keyof typeof weatherTypes)[] = ['clear', 'cloudy', 'rainy', 'windy']
@@ -85,7 +112,7 @@ export default function WeatherGenerator() {
                     <div className="space-y-6">
                         <div>
                             <Label className="text-base">Climate</Label>
-                            <RadioGroup defaultValue="temperate" onValueChange={(value) => setClimate(value as Climate)} className="flex flex-col space-y-1 mt-2">
+                            <RadioGroup value={climate} onValueChange={(value) => setClimate(value as Climate)} className="flex flex-col space-y-1 mt-2">
                                 {climates.map((c) => (
                                     <div key={c} className="flex items-center space-x-2">
                                         <RadioGroupItem value={c} id={`climate-${c}`} />
@@ -96,7 +123,7 @@ export default function WeatherGenerator() {
                         </div>
                         <div>
                             <Label className="text-base">Season</Label>
-                            <RadioGroup defaultValue="spring" onValueChange={(value) => setSeason(value as Season)} className="flex flex-col space-y-1 mt-2">
+                            <RadioGroup value={season} onValueChange={(value) => setSeason(value as Season)} className="flex flex-col space-y-1 mt-2">
                                 {seasons.map((s) => (
                                     <div key={s} className="flex items-center space-x-2">
                                         <RadioGroupItem value={s} id={`season-${s}`} />

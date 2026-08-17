@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -11,7 +11,10 @@ import {
     Heart,
     RefreshCw,
     MessageCircle,
+    Save,
+    Trash2,
 } from "lucide-react";
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
 
 type NPC = {
     name: string;
@@ -83,8 +86,28 @@ function generatePersonality(trait: string, quirk: string): string {
     return `${trait} in nature and ${getRandomItem(speechPatterns)}. ${quirk}.`;
 }
 
+type SavedNPC = NPC & { id: number };
+
 export function NPCGenerator() {
     const [npc, setNPC] = useState<NPC | null>(null);
+    const [savedNpcs, setSavedNpcs] = useState<SavedNPC[]>([]);
+
+    useEffect(() => {
+        setSavedNpcs(loadFromStorage(STORAGE_KEYS.savedNpcs, []));
+    }, []);
+
+    const saveNpc = () => {
+        if (!npc) return;
+        const updated = [...savedNpcs, { ...npc, id: Date.now() }];
+        setSavedNpcs(updated);
+        saveToStorage(STORAGE_KEYS.savedNpcs, updated);
+    };
+
+    const deleteNpc = (id: number) => {
+        const updated = savedNpcs.filter((saved) => saved.id !== id);
+        setSavedNpcs(updated);
+        saveToStorage(STORAGE_KEYS.savedNpcs, updated);
+    };
 
     const generateNPC = () => {
         const race = getRandomItem(npcData.races);
@@ -125,6 +148,16 @@ export function NPCGenerator() {
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Generate NPC
                 </Button>
+                {npc && (
+                    <Button
+                        onClick={saveNpc}
+                        variant="outline"
+                        className="flex items-center"
+                    >
+                        <Save className="mr-2 h-4 w-4" />
+                        Save NPC
+                    </Button>
+                )}
             </div>
 
             {npc && (
@@ -277,6 +310,38 @@ export function NPCGenerator() {
                         </div>
                     </CardContent>
                 </Card>
+            )}
+
+            {savedNpcs.length > 0 && (
+                <div className="space-y-2">
+                    <h2 className="text-xl font-bold">Saved NPCs</h2>
+                    {savedNpcs.map((saved) => (
+                        <Card key={saved.id}>
+                            <CardHeader className="flex flex-row items-center justify-between py-3">
+                                <button
+                                    className="text-left"
+                                    onClick={() => setNPC(saved)}
+                                >
+                                    <CardTitle className="text-base">
+                                        {saved.name}
+                                    </CardTitle>
+                                    <p className="text-sm text-muted-foreground">
+                                        {saved.race.name} {saved.class.name} —{" "}
+                                        {saved.occupation}
+                                    </p>
+                                </button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="Delete saved NPC"
+                                    onClick={() => deleteNpc(saved.id)}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </CardHeader>
+                        </Card>
+                    ))}
+                </div>
             )}
         </div>
     );

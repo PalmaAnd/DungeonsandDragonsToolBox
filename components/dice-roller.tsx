@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
+
+const MAX_STORED_ROLLS = 50;
 
 type DieType = "d4" | "d6" | "d8" | "d10" | "d12" | "d20" | "d100";
 
@@ -32,9 +35,28 @@ type RollResult = {
 
 const diceTypes: DieType[] = ["d4", "d6", "d8", "d10", "d12", "d20", "d100"];
 
+type StoredRollResult = Omit<RollResult, "timestamp"> & { timestamp: string };
+
 export function DiceRoller() {
     const [rolls, setRolls] = useState<RollResult[]>([]);
     const [customRoll, setCustomRoll] = useState("");
+
+    useEffect(() => {
+        const stored = loadFromStorage<StoredRollResult[]>(
+            STORAGE_KEYS.diceRolls,
+            []
+        );
+        setRolls(
+            stored.map((roll) => ({
+                ...roll,
+                timestamp: new Date(roll.timestamp),
+            }))
+        );
+    }, []);
+
+    useEffect(() => {
+        saveToStorage(STORAGE_KEYS.diceRolls, rolls.slice(0, MAX_STORED_ROLLS));
+    }, [rolls]);
 
     const rollDie = (sides: number): number => {
         return Math.floor(Math.random() * sides) + 1;
@@ -84,7 +106,7 @@ export function DiceRoller() {
                     },
                 },
             };
-            setRolls((prev) => [newRoll, ...prev]);
+            setRolls((prev) => [newRoll, ...prev].slice(0, MAX_STORED_ROLLS));
         } else {
             const result = rollDie(sides);
             const newRoll: RollResult = {
@@ -102,7 +124,7 @@ export function DiceRoller() {
                     ],
                 },
             };
-            setRolls((prev) => [newRoll, ...prev]);
+            setRolls((prev) => [newRoll, ...prev].slice(0, MAX_STORED_ROLLS));
         }
     };
 
@@ -130,7 +152,7 @@ export function DiceRoller() {
                 advantage: true,
             },
         };
-        setRolls((prev) => [newRoll, ...prev]);
+        setRolls((prev) => [newRoll, ...prev].slice(0, MAX_STORED_ROLLS));
     };
 
     const handleDisadvantageRoll = (die: DieType) => {
@@ -157,7 +179,7 @@ export function DiceRoller() {
                 disadvantage: true,
             },
         };
-        setRolls((prev) => [newRoll, ...prev]);
+        setRolls((prev) => [newRoll, ...prev].slice(0, MAX_STORED_ROLLS));
     };
 
     const parseCustomRoll = (formula: string): RollResult | null => {
@@ -236,7 +258,7 @@ export function DiceRoller() {
 
         const result = parseCustomRoll(customRoll);
         if (result) {
-            setRolls((prev) => [result, ...prev]);
+            setRolls((prev) => [result, ...prev].slice(0, MAX_STORED_ROLLS));
             setCustomRoll("");
         }
     };
