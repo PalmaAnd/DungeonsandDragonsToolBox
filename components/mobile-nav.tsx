@@ -30,7 +30,6 @@ export function MobileNav() {
         { href: "/character-creator", label: "Character Creator" },
         { href: "/spell-list", label: "Spell List" },
         { href: "/monster-compendium", label: "Monster Compendium" },
-        { href: "/character-sheet", label: "Character Sheets" },
         { href: "/campaign-dashboard", label: "Campaigns" },
     ];
 
