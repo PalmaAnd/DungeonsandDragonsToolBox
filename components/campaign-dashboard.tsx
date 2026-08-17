@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,56 +24,44 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { Trash2 } from "lucide-react";
 import {
     generateId,
     loadFromStorage,
     saveToStorage,
     STORAGE_KEYS,
 } from "@/lib/storage";
+import {
+    normalizeCampaign,
+    type Campaign,
+    type SavedCharacterSummary,
+} from "@/lib/campaign";
 
-type Campaign = {
-    id: string;
-    name: string;
-    description: string;
-    lastPlayed: string;
-    characterIds: string[];
-};
-
-type SavedCharacterSummary = {
-    id: string;
-    character: { name: string; class: string; level: number };
-};
-
-type CampaignForm = {
-    id: string | null;
-    name: string;
-    description: string;
-    characterIds: string[];
-};
-
-const emptyForm: CampaignForm = {
-    id: null,
-    name: "",
-    description: "",
-    characterIds: [],
-};
+const emptyForm = { name: "", description: "" };
 
 export function CampaignDashboard() {
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [savedCharacters, setSavedCharacters] = useState<
         SavedCharacterSummary[]
     >([]);
-    const [formOpen, setFormOpen] = useState(false);
-    const [form, setForm] = useState<CampaignForm>(emptyForm);
+    const [createOpen, setCreateOpen] = useState(false);
+    const [form, setForm] = useState(emptyForm);
 
     useEffect(() => {
-        /* eslint-disable react-hooks/set-state-in-effect -- hydrating from localStorage on mount, not derivable during render (no SSR value to read) */
-        setCampaigns(loadFromStorage(STORAGE_KEYS.campaigns, []));
-        setSavedCharacters(
-            loadFromStorage(STORAGE_KEYS.savedCharacters, [])
-        );
-        /* eslint-enable react-hooks/set-state-in-effect */
+        let cancelled = false;
+        Promise.all([
+            loadFromStorage<Campaign[]>(STORAGE_KEYS.campaigns, []),
+            loadFromStorage<SavedCharacterSummary[]>(
+                STORAGE_KEYS.savedCharacters,
+                []
+            ),
+        ]).then(([storedCampaigns, storedCharacters]) => {
+            if (cancelled) return;
+            setCampaigns(storedCampaigns.map(normalizeCampaign));
+            setSavedCharacters(storedCharacters);
+        });
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     useEffect(() => {
@@ -81,75 +70,26 @@ export function CampaignDashboard() {
 
     const openCreateForm = () => {
         setForm(emptyForm);
-        setFormOpen(true);
+        setCreateOpen(true);
     };
 
-    const openEditForm = (campaign: Campaign) => {
-        setForm({
-            id: campaign.id,
-            name: campaign.name,
-            description: campaign.description,
-            characterIds: campaign.characterIds,
-        });
-        setFormOpen(true);
-    };
-
-    const toggleCharacter = (characterId: string) => {
-        setForm((prev) => ({
-            ...prev,
-            characterIds: prev.characterIds.includes(characterId)
-                ? prev.characterIds.filter((id) => id !== characterId)
-                : [...prev.characterIds, characterId],
-        }));
-    };
-
-    const saveCampaign = () => {
+    const createCampaign = () => {
         if (!form.name.trim()) return;
 
-        if (form.id === null) {
-            setCampaigns((prev) => [
-                ...prev,
-                {
-                    id: generateId(),
-                    name: form.name,
-                    description: form.description,
-                    lastPlayed: "Never",
-                    characterIds: form.characterIds,
-                },
-            ]);
-        } else {
-            setCampaigns((prev) =>
-                prev.map((campaign) =>
-                    campaign.id === form.id
-                        ? {
-                              ...campaign,
-                              name: form.name,
-                              description: form.description,
-                              characterIds: form.characterIds,
-                          }
-                        : campaign
-                )
-            );
-        }
+        setCampaigns((prev) => [
+            ...prev,
+            {
+                id: generateId(),
+                name: form.name,
+                description: form.description,
+                lastPlayed: "Never",
+                characterIds: [],
+                sessions: [],
+            },
+        ]);
 
-        setFormOpen(false);
+        setCreateOpen(false);
         setForm(emptyForm);
-    };
-
-    const deleteCampaign = (id: string) => {
-        setCampaigns((prev) => prev.filter((campaign) => campaign.id !== id));
-        setFormOpen(false);
-        setForm(emptyForm);
-    };
-
-    const startSession = (id: string) => {
-        setCampaigns((prev) =>
-            prev.map((campaign) =>
-                campaign.id === id
-                    ? { ...campaign, lastPlayed: new Date().toLocaleDateString() }
-                    : campaign
-            )
-        );
     };
 
     const linkedCharacterNames = (characterIds: string[]) =>
@@ -159,21 +99,17 @@ export function CampaignDashboard() {
 
     return (
         <div className="space-y-6">
-            <Dialog open={formOpen} onOpenChange={setFormOpen}>
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
                 <DialogTrigger asChild>
                     <Button onClick={openCreateForm}>Create New Campaign</Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
-                        <DialogTitle>
-                            {form.id === null
-                                ? "Create New Campaign"
-                                : "Manage Campaign"}
-                        </DialogTitle>
+                        <DialogTitle>Create New Campaign</DialogTitle>
                         <DialogDescription>
-                            {form.id === null
-                                ? "Enter the details of your new campaign here."
-                                : "Update your campaign details and linked characters."}
+                            Enter the details of your new campaign here. You
+                            can link characters and log sessions after
+                            it&apos;s created.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -209,60 +145,10 @@ export function CampaignDashboard() {
                                 className="col-span-3"
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-start gap-4">
-                            <Label className="text-right pt-1">
-                                Characters
-                            </Label>
-                            <div className="col-span-3 space-y-1">
-                                {savedCharacters.length === 0 ? (
-                                    <p className="text-sm text-muted-foreground">
-                                        No saved characters yet. Save one in
-                                        the Character Creator to link it here.
-                                    </p>
-                                ) : (
-                                    savedCharacters.map((saved) => (
-                                        <label
-                                            key={saved.id}
-                                            className="flex items-center gap-2 text-sm"
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={form.characterIds.includes(
-                                                    saved.id
-                                                )}
-                                                onChange={() =>
-                                                    toggleCharacter(saved.id)
-                                                }
-                                            />
-                                            {saved.character.name ||
-                                                "Unnamed"}
-                                            {saved.character.class && (
-                                                <span className="text-muted-foreground">
-                                                    Lvl {saved.character.level}{" "}
-                                                    {saved.character.class}
-                                                </span>
-                                            )}
-                                        </label>
-                                    ))
-                                )}
-                            </div>
-                        </div>
                     </div>
-                    <DialogFooter className="flex items-center sm:justify-between">
-                        {form.id !== null && (
-                            <Button
-                                variant="ghost"
-                                className="text-destructive"
-                                onClick={() => deleteCampaign(form.id!)}
-                            >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete Campaign
-                            </Button>
-                        )}
-                        <Button onClick={saveCampaign}>
-                            {form.id === null
-                                ? "Create Campaign"
-                                : "Save Changes"}
+                    <DialogFooter>
+                        <Button onClick={createCampaign}>
+                            Create Campaign
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -294,18 +180,11 @@ export function CampaignDashboard() {
                                 </div>
                             )}
                         </CardContent>
-                        <CardFooter className="flex justify-between">
-                            <Button
-                                variant="outline"
-                                onClick={() => openEditForm(campaign)}
-                            >
-                                Manage Campaign
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                onClick={() => startSession(campaign.id)}
-                            >
-                                Start Session
+                        <CardFooter>
+                            <Button variant="outline" asChild className="w-full">
+                                <Link href={`/campaign-dashboard/${campaign.id}`}>
+                                    Manage Campaign
+                                </Link>
                             </Button>
                         </CardFooter>
                     </Card>
