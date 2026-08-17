@@ -226,6 +226,7 @@ type CharacterDraft = {
     equipment: string[];
     weapons: string[];
     armor: string;
+    shield: boolean;
     selectedPack: string;
     spells: {
         cantrips: string[];
@@ -282,6 +283,7 @@ const initialCharacterDraft: CharacterDraft = {
     equipment: [],
     weapons: [],
     armor: "",
+    shield: false,
     selectedPack: "",
 
     // Spells (for spellcasters)
@@ -387,7 +389,7 @@ export function CharacterCreator({
         return calculateArmorClass(
             dexModifier,
             character.armor,
-            false,
+            character.shield,
             enhancedData
         );
     };
@@ -475,6 +477,7 @@ export function CharacterCreator({
         character.abilities.constitution,
         character.abilities.dexterity,
         character.armor,
+        character.shield,
     ]);
 
     const handleInputChange = (
@@ -1361,6 +1364,57 @@ export function CharacterCreator({
                                     </ul>
                                 </div>
                             )}
+
+                            {/* Armor & Shield */}
+                            <div>
+                                <h4 className="font-semibold mb-2">
+                                    Equipped Armor
+                                </h4>
+                                <Select
+                                    value={character.armor || "none"}
+                                    onValueChange={(value) =>
+                                        handleSelectChange(
+                                            "armor",
+                                            value === "none" ? "" : value
+                                        )
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Choose armor" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">
+                                            None (Unarmored)
+                                        </SelectItem>
+                                        {enhancedData.equipment.armor.map(
+                                            (armorItem) => (
+                                                <SelectItem
+                                                    key={armorItem.name}
+                                                    value={armorItem.name}
+                                                >
+                                                    {armorItem.name}
+                                                    {armorItem.armorClass
+                                                        ? ` (AC ${armorItem.armorClass})`
+                                                        : ""}
+                                                </SelectItem>
+                                            )
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                                <label className="mt-2 flex items-center gap-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={character.shield}
+                                        onChange={(e) =>
+                                            setCharacter({
+                                                ...character,
+                                                shield: e.target.checked,
+                                            })
+                                        }
+                                    />
+                                    Carrying a shield (+2 AC)
+                                </label>
+                            </div>
 
                             {/* Equipment Packs */}
                             <div>

@@ -26,7 +26,7 @@ A Next.js toolbox for Dungeons & Dragons players and Dungeon Masters — charact
 
 ### Character Tools
 
--   **Character Creator** _(in progress)_ — build a full 5e character sheet (abilities, skills, equipment, spells, backstory) and save multiple characters in your browser.
+-   **Character Creator** — build a full 5e character sheet (abilities, skills, equipment, spells, backstory) and save multiple characters in your browser.
 -   **Spell List** — searchable spell reference.
 
 ### Campaign Tools
