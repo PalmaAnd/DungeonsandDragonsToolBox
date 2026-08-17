@@ -37,6 +37,7 @@ import {
     calculateArmorClass,
     getDefaultSpells,
 } from "@/lib/character-calculations";
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
 
 // Add the missing CharacterData type
 type CharacterData = {
@@ -196,76 +197,168 @@ const alignments = [
     "Chaotic Evil",
 ];
 
+type CharacterDraft = {
+    name: string;
+    level: number;
+    class: string;
+    subclass: string;
+    race: string;
+    subrace: string;
+    background: string;
+    alignment: string;
+    abilities: Record<Ability, number>;
+    hitPoints: number;
+    armorClass: number;
+    speed: number;
+    proficiencyBonus: number;
+    skills: string[];
+    proficiencies: {
+        armor: string[];
+        weapons: string[];
+        tools: string[];
+        languages: string[];
+    };
+    equipment: string[];
+    weapons: string[];
+    armor: string;
+    selectedPack: string;
+    spells: {
+        cantrips: string[];
+        level1: string[];
+        level2: string[];
+        level3: string[];
+    };
+    personality: string;
+    ideals: string;
+    bonds: string;
+    flaws: string;
+    backstory: string;
+    features: string[];
+    traits: string[];
+};
+
+const initialCharacterDraft: CharacterDraft = {
+    // Basic Info
+    name: "",
+    level: 1,
+    class: "",
+    subclass: "",
+    race: "",
+    subrace: "",
+    background: "",
+    alignment: "",
+
+    // Abilities
+    abilities: {
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+    },
+
+    // Character Details
+    hitPoints: 0,
+    armorClass: 10,
+    speed: 30,
+    proficiencyBonus: 2,
+
+    // Skills & Proficiencies
+    skills: [],
+    proficiencies: {
+        armor: [],
+        weapons: [],
+        tools: [],
+        languages: [],
+    },
+
+    // Equipment
+    equipment: [],
+    weapons: [],
+    armor: "",
+    selectedPack: "",
+
+    // Spells (for spellcasters)
+    spells: {
+        cantrips: [],
+        level1: [],
+        level2: [],
+        level3: [],
+    },
+
+    // Character Story
+    personality: "",
+    ideals: "",
+    bonds: "",
+    flaws: "",
+    backstory: "",
+
+    // Features & Traits
+    features: [],
+    traits: [],
+};
+
+type SavedCharacter = { id: number; character: CharacterDraft };
+
 export function CharacterCreator({
     enhancedData,
 }: {
     characterData?: CharacterData;
     enhancedData: EnhancedCharacterData;
 }) {
-    const [character, setCharacter] = useState({
-        // Basic Info
-        name: "",
-        level: 1,
-        class: "",
-        subclass: "",
-        race: "",
-        subrace: "",
-        background: "",
-        alignment: "",
-
-        // Abilities
-        abilities: {
-            strength: 10,
-            dexterity: 10,
-            constitution: 10,
-            intelligence: 10,
-            wisdom: 10,
-            charisma: 10,
-        },
-
-        // Character Details
-        hitPoints: 0,
-        armorClass: 10,
-        speed: 30,
-        proficiencyBonus: 2,
-
-        // Skills & Proficiencies
-        skills: [] as string[],
-        proficiencies: {
-            armor: [] as string[],
-            weapons: [] as string[],
-            tools: [] as string[],
-            languages: [] as string[],
-        },
-
-        // Equipment
-        equipment: [] as string[],
-        weapons: [] as string[],
-        armor: "",
-        selectedPack: "",
-
-        // Spells (for spellcasters)
-        spells: {
-            cantrips: [] as string[],
-            level1: [] as string[],
-            level2: [] as string[],
-            level3: [] as string[],
-        },
-
-        // Character Story
-        personality: "",
-        ideals: "",
-        bonds: "",
-        flaws: "",
-        backstory: "",
-
-        // Features & Traits
-        features: [] as string[],
-        traits: [] as string[],
-    });
+    const [character, setCharacter] = useState<CharacterDraft>(
+        initialCharacterDraft
+    );
 
     const [showExportDialog, setShowExportDialog] = useState(false);
     const [currentTab, setCurrentTab] = useState("basics");
+    const [savedCharacters, setSavedCharacters] = useState<SavedCharacter[]>(
+        []
+    );
+    const [activeSavedId, setActiveSavedId] = useState<number | null>(null);
+
+    useEffect(() => {
+        setSavedCharacters(loadFromStorage(STORAGE_KEYS.savedCharacters, []));
+    }, []);
+
+    const saveCharacter = () => {
+        if (!character.name.trim()) {
+            alert("Give your character a name before saving.");
+            return;
+        }
+
+        let updated: SavedCharacter[];
+        if (activeSavedId !== null) {
+            updated = savedCharacters.map((saved) =>
+                saved.id === activeSavedId ? { ...saved, character } : saved
+            );
+        } else {
+            const newId = Date.now();
+            updated = [...savedCharacters, { id: newId, character }];
+            setActiveSavedId(newId);
+        }
+
+        setSavedCharacters(updated);
+        saveToStorage(STORAGE_KEYS.savedCharacters, updated);
+    };
+
+    const loadCharacter = (saved: SavedCharacter) => {
+        setCharacter(saved.character);
+        setActiveSavedId(saved.id);
+    };
+
+    const deleteCharacter = (id: number) => {
+        const updated = savedCharacters.filter((saved) => saved.id !== id);
+        setSavedCharacters(updated);
+        saveToStorage(STORAGE_KEYS.savedCharacters, updated);
+        if (activeSavedId === id) setActiveSavedId(null);
+    };
+
+    const startNewCharacter = () => {
+        setCharacter(initialCharacterDraft);
+        setActiveSavedId(null);
+    };
 
     // Calculate derived stats
     const getAbilityModifier = (score: number) => Math.floor((score - 10) / 2);
@@ -558,6 +651,62 @@ export function CharacterCreator({
                     Create your D&D 5e character with all the details
                 </p>
             </div>
+
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>My Characters</CardTitle>
+                    {activeSavedId !== null && (
+                        <Button variant="outline" size="sm" onClick={startNewCharacter}>
+                            Start New Character
+                        </Button>
+                    )}
+                </CardHeader>
+                <CardContent>
+                    {savedCharacters.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                            No saved characters yet. Fill in a name below and
+                            click &quot;Save Character&quot; to keep this one
+                            in your browser.
+                        </p>
+                    ) : (
+                        <div className="flex flex-wrap gap-2">
+                            {savedCharacters.map((saved) => (
+                                <div
+                                    key={saved.id}
+                                    className={`flex items-center gap-2 rounded-md border px-3 py-1.5 ${
+                                        saved.id === activeSavedId
+                                            ? "border-primary bg-primary/5"
+                                            : ""
+                                    }`}
+                                >
+                                    <button
+                                        className="text-sm text-left"
+                                        onClick={() => loadCharacter(saved)}
+                                    >
+                                        {saved.character.name || "Unnamed"}
+                                        {saved.character.class && (
+                                            <span className="text-muted-foreground">
+                                                {" "}
+                                                — Lvl {saved.character.level}{" "}
+                                                {saved.character.class}
+                                            </span>
+                                        )}
+                                    </button>
+                                    <button
+                                        className="text-muted-foreground hover:text-destructive text-sm"
+                                        aria-label="Delete saved character"
+                                        onClick={() =>
+                                            deleteCharacter(saved.id)
+                                        }
+                                    >
+                                        &times;
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             <Tabs
                 value={currentTab}
@@ -1871,6 +2020,11 @@ export function CharacterCreator({
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2 justify-center">
+                <Button onClick={saveCharacter}>
+                    {activeSavedId !== null
+                        ? "Update Saved Character"
+                        : "Save Character"}
+                </Button>
                 <Button onClick={exportToJson} variant="outline">
                     Export to JSON
                 </Button>
