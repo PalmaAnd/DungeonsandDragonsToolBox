@@ -11,6 +11,7 @@ import {
 import { ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MobileNav } from "@/components/mobile-nav";
+import { DataTransfer } from "@/components/data-transfer";
 
 export function Navbar() {
     return (
@@ -100,7 +101,8 @@ export function Navbar() {
                     </DropdownMenu>
                 </div>
 
-                <div className="flex items-center">
+                <div className="flex items-center gap-1">
+                    <DataTransfer />
                     <ThemeToggle />
                 </div>
             </nav>
