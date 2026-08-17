@@ -38,6 +38,9 @@ export function Navbar() {
                             Monster Compendium
                         </Link>
                     </Button>
+                    <Button variant="ghost" asChild>
+                        <Link href="/campaign-dashboard">Campaigns</Link>
+                    </Button>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost">
