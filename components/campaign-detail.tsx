@@ -15,13 +15,20 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Swords, Trash2 } from "lucide-react";
 import { loadFromStorage, saveToStorage, STORAGE_KEYS, generateId } from "@/lib/storage";
 import {
+    appendSession,
     normalizeCampaign,
     type Campaign,
+    type LinkedEntityField,
     type SavedCharacterSummary,
 } from "@/lib/campaign";
+import { addCombatantsToEncounter, type Combatant } from "@/lib/encounter";
+
+type SavedNpcSummary = { id: string; name: string; occupation?: string };
+type SavedLootSummary = { id: string; gold: number; container: string };
+type SavedTavernSummary = { id: string; name: string };
 
 export function CampaignDetail({ id }: { id: string }) {
     const router = useRouter();
@@ -29,6 +36,9 @@ export function CampaignDetail({ id }: { id: string }) {
     const [savedCharacters, setSavedCharacters] = useState<
         SavedCharacterSummary[]
     >([]);
+    const [savedNpcs, setSavedNpcs] = useState<SavedNpcSummary[]>([]);
+    const [savedLoot, setSavedLoot] = useState<SavedLootSummary[]>([]);
+    const [savedTaverns, setSavedTaverns] = useState<SavedTavernSummary[]>([]);
     const [sessionDate, setSessionDate] = useState(
         new Date().toISOString().slice(0, 10)
     );
@@ -42,11 +52,28 @@ export function CampaignDetail({ id }: { id: string }) {
                 STORAGE_KEYS.savedCharacters,
                 []
             ),
-        ]).then(([storedCampaigns, storedCharacters]) => {
-            if (cancelled) return;
-            setCampaigns(storedCampaigns.map(normalizeCampaign));
-            setSavedCharacters(storedCharacters);
-        });
+            loadFromStorage<SavedNpcSummary[]>(STORAGE_KEYS.savedNpcs, []),
+            loadFromStorage<SavedLootSummary[]>(STORAGE_KEYS.savedLoot, []),
+            loadFromStorage<SavedTavernSummary[]>(
+                STORAGE_KEYS.savedTaverns,
+                []
+            ),
+        ]).then(
+            ([
+                storedCampaigns,
+                storedCharacters,
+                storedNpcs,
+                storedLoot,
+                storedTaverns,
+            ]) => {
+                if (cancelled) return;
+                setCampaigns(storedCampaigns.map(normalizeCampaign));
+                setSavedCharacters(storedCharacters);
+                setSavedNpcs(storedNpcs);
+                setSavedLoot(storedLoot);
+                setSavedTaverns(storedTaverns);
+            }
+        );
         return () => {
             cancelled = true;
         };
@@ -65,21 +92,22 @@ export function CampaignDetail({ id }: { id: string }) {
         );
     };
 
-    const toggleCharacter = (characterId: string) => {
+    const toggleLinked = (field: LinkedEntityField, entityId: string) => {
         if (!campaign) return;
-        const characterIds = campaign.characterIds.includes(characterId)
-            ? campaign.characterIds.filter((cid) => cid !== characterId)
-            : [...campaign.characterIds, characterId];
-        updateCampaign({ characterIds });
+        const ids = campaign[field].includes(entityId)
+            ? campaign[field].filter((linkedId) => linkedId !== entityId)
+            : [...campaign[field], entityId];
+        updateCampaign({ [field]: ids } as Partial<Campaign>);
     };
 
     const logSession = () => {
         if (!campaign || !sessionNotes.trim()) return;
-        const session = { id: generateId(), date: sessionDate, notes: sessionNotes };
-        updateCampaign({
-            sessions: [session, ...campaign.sessions],
-            lastPlayed: sessionDate,
-        });
+        const session = {
+            id: generateId(),
+            date: sessionDate,
+            notes: sessionNotes,
+        };
+        setCampaigns((prev) => appendSession(prev ?? [], id, session));
         setSessionNotes("");
     };
 
@@ -93,6 +121,29 @@ export function CampaignDetail({ id }: { id: string }) {
     const deleteCampaign = () => {
         setCampaigns((prev) => (prev ?? []).filter((c) => c.id !== id));
         router.push("/campaign-dashboard");
+    };
+
+    const party = campaign
+        ? savedCharacters.filter((c) => campaign.characterIds.includes(c.id))
+        : [];
+
+    const startEncounterWithParty = async () => {
+        if (party.length === 0) return;
+        const combatants: Combatant[] = party.map((member) => ({
+            id: generateId(),
+            name: member.character.name || "Unnamed",
+            initiative: 0,
+            initiativeModifier: 0,
+            hp: member.character.hitPoints,
+            maxHp: member.character.hitPoints,
+            ac: member.character.armorClass,
+            isPlayer: true,
+            savingThrows: 3,
+            failedSaves: 0,
+            conditions: [],
+        }));
+        await addCombatantsToEncounter(combatants);
+        router.push("/tools/initiative-tracker");
     };
 
     if (campaigns === null) {
@@ -114,6 +165,34 @@ export function CampaignDetail({ id }: { id: string }) {
             </div>
         );
     }
+
+    const renderLinkedList = <T extends { id: string }>(
+        items: T[],
+        field: LinkedEntityField,
+        label: (item: T) => React.ReactNode,
+        emptyMessage: string
+    ) => {
+        if (items.length === 0) {
+            return (
+                <p className="text-sm text-muted-foreground">
+                    {emptyMessage}
+                </p>
+            );
+        }
+        return items.map((item) => (
+            <label
+                key={item.id}
+                className="flex items-center gap-2 text-sm"
+            >
+                <input
+                    type="checkbox"
+                    checked={campaign[field].includes(item.id)}
+                    onChange={() => toggleLinked(field, item.id)}
+                />
+                {label(item)}
+            </label>
+        ));
+    };
 
     return (
         <div className="space-y-6">
@@ -167,41 +246,115 @@ export function CampaignDetail({ id }: { id: string }) {
             </Card>
 
             <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Party Roster</CardTitle>
+                        <CardDescription>
+                            Linked characters, ready to drop into a fight.
+                        </CardDescription>
+                    </div>
+                    {party.length > 0 && (
+                        <Button onClick={startEncounterWithParty}>
+                            <Swords className="h-4 w-4 mr-2" />
+                            Start Encounter with Party
+                        </Button>
+                    )}
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {party.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                            {party.map((member) => (
+                                <Badge key={member.id} variant="secondary">
+                                    {member.character.name || "Unnamed"} —
+                                    Lvl {member.character.level}{" "}
+                                    {member.character.class} (HP{" "}
+                                    {member.character.hitPoints}, AC{" "}
+                                    {member.character.armorClass})
+                                </Badge>
+                            ))}
+                        </div>
+                    )}
+                    <div className="space-y-1">
+                        {renderLinkedList(
+                            savedCharacters,
+                            "characterIds",
+                            (saved) => (
+                                <>
+                                    {saved.character.name || "Unnamed"}
+                                    {saved.character.class && (
+                                        <span className="text-muted-foreground">
+                                            Lvl {saved.character.level}{" "}
+                                            {saved.character.class}
+                                        </span>
+                                    )}
+                                </>
+                            ),
+                            "No saved characters yet. Save one in the Character Creator to link it here."
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
                 <CardHeader>
-                    <CardTitle>Linked Characters</CardTitle>
+                    <CardTitle>Linked NPCs</CardTitle>
                     <CardDescription>
-                        Characters saved in the Character Creator that belong
-                        to this campaign.
+                        Recurring NPCs saved from the NPC Generator.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-1">
-                    {savedCharacters.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                            No saved characters yet. Save one in the Character
-                            Creator to link it here.
-                        </p>
-                    ) : (
-                        savedCharacters.map((saved) => (
-                            <label
-                                key={saved.id}
-                                className="flex items-center gap-2 text-sm"
-                            >
-                                <input
-                                    type="checkbox"
-                                    checked={campaign.characterIds.includes(
-                                        saved.id
-                                    )}
-                                    onChange={() => toggleCharacter(saved.id)}
-                                />
-                                {saved.character.name || "Unnamed"}
-                                {saved.character.class && (
+                    {renderLinkedList(
+                        savedNpcs,
+                        "npcIds",
+                        (npc) => (
+                            <>
+                                {npc.name}
+                                {npc.occupation && (
                                     <span className="text-muted-foreground">
-                                        Lvl {saved.character.level}{" "}
-                                        {saved.character.class}
+                                        {npc.occupation}
                                     </span>
                                 )}
-                            </label>
-                        ))
+                            </>
+                        ),
+                        "No saved NPCs yet. Save one in the NPC Generator to link it here."
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Linked Loot</CardTitle>
+                    <CardDescription>
+                        Treasure hoards saved from the Loot Generator.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                    {renderLinkedList(
+                        savedLoot,
+                        "lootIds",
+                        (loot) => (
+                            <>
+                                {loot.gold} gp in a {loot.container}
+                            </>
+                        ),
+                        "No saved loot yet. Save some in the Loot Generator to link it here."
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Linked Taverns</CardTitle>
+                    <CardDescription>
+                        Taverns saved from the Tavern Generator.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                    {renderLinkedList(
+                        savedTaverns,
+                        "tavernIds",
+                        (tavern) => tavern.name,
+                        "No saved taverns yet. Save one in the Tavern Generator to link it here."
                     )}
                 </CardContent>
             </Card>
