@@ -84,6 +84,9 @@ export function CampaignDashboard() {
                 description: form.description,
                 lastPlayed: "Never",
                 characterIds: [],
+                npcIds: [],
+                lootIds: [],
+                tavernIds: [],
                 sessions: [],
             },
         ]);

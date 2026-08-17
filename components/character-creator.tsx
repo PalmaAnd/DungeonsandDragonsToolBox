@@ -202,7 +202,7 @@ const alignments = [
     "Chaotic Evil",
 ];
 
-type CharacterDraft = {
+export type CharacterDraft = {
     name: string;
     level: number;
     class: string;
@@ -306,7 +306,7 @@ const initialCharacterDraft: CharacterDraft = {
     traits: [],
 };
 
-type SavedCharacter = { id: string; character: CharacterDraft };
+export type SavedCharacter = { id: string; character: CharacterDraft };
 
 export function CharacterCreator({
     enhancedData,

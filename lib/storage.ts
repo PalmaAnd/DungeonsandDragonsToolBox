@@ -16,6 +16,7 @@ export const STORAGE_KEYS = {
     initiativeEncounter: "dnd-toolbox:initiative-encounter",
     savedCharacters: "dnd-toolbox:saved-characters",
     campaigns: "dnd-toolbox:campaigns",
+    activeCampaignId: "dnd-toolbox:active-campaign-id",
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
