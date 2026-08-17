@@ -15,44 +15,19 @@ import {
 import { MonsterCard } from "@/components/monster-card";
 import { MonsterDetails } from "@/components/monster-details";
 import { Search } from "lucide-react";
-
-interface Monster {
-    name: string;
-    meta: string;
-    "Armor Class": string;
-    "Hit Points": string;
-    Speed: string;
-    STR: string;
-    STR_mod: string;
-    DEX: string;
-    DEX_mod: string;
-    CON: string;
-    CON_mod: string;
-    INT: string;
-    INT_mod: string;
-    WIS: string;
-    WIS_mod: string;
-    CHA: string;
-    CHA_mod: string;
-    "Saving Throws"?: string;
-    Skills?: string;
-    "Damage Immunities"?: string;
-    "Condition Immunities"?: string;
-    Senses: string;
-    Languages: string;
-    Challenge: string;
-    Traits: string;
-    Actions: string;
-    "Legendary Actions"?: string;
-    img_url: string;
-    type: string;
-    size: string;
-    alignment: string;
-    cr: string;
-}
+import type { MonsterDetail, MonsterSummary } from "@/lib/monsters";
 
 interface MonsterCompendiumProps {
-    monsters: Monster[];
+    monsters: MonsterSummary[];
+}
+
+// Challenge ratings can be a fraction like "1/8"; parse those without eval().
+function parseChallengeRating(cr: string): number {
+    if (cr.includes("/")) {
+        const [numerator, denominator] = cr.split("/");
+        return parseFloat(numerator) / parseFloat(denominator);
+    }
+    return parseFloat(cr);
 }
 
 export function MonsterCompendium({ monsters }: MonsterCompendiumProps) {
@@ -61,76 +36,38 @@ export function MonsterCompendium({ monsters }: MonsterCompendiumProps) {
     const [crFilter, setCrFilter] = useState("all");
     const [sizeFilter, setSizeFilter] = useState("all");
     const [alignmentFilter, setAlignmentFilter] = useState("all");
-    const [selectedMonster, setSelectedMonster] = useState<Monster | null>(
-        null
-    );
-
-    // Process monster data to ensure consistent CR field
-    const processedMonsters = useMemo(() => {
-        return monsters.map((monster) => {
-            // If cr is missing but Challenge exists, use that
-            if (!monster.cr && monster.Challenge) {
-                return {
-                    ...monster,
-                    cr: monster.Challenge.replace("CR ", "").split(" (")[0], // Remove "CR " prefix if present
-                };
-            }
-            return monster;
-        });
-    }, [monsters]);
+    const [selectedMonster, setSelectedMonster] =
+        useState<MonsterDetail | null>(null);
+    const [loadingMonster, setLoadingMonster] = useState<string | null>(null);
+    const [loadError, setLoadError] = useState(false);
 
     const monsterTypes = useMemo(
-        () =>
-            Array.from(
-                new Set(
-                    processedMonsters.map((monster) => {
-                        const type = monster.meta
-                            .split(" ")[1]
-                            .replace(",", "");
-                        monster.type =
-                            type.charAt(0).toUpperCase() + type.slice(1);
-                        return monster.type;
-                    })
-                )
-            ).sort(),
-        [processedMonsters]
+        () => Array.from(new Set(monsters.map((monster) => monster.type))).sort(),
+        [monsters]
     );
     const monsterSizes = useMemo(
-        () =>
-            Array.from(
-                new Set(
-                    processedMonsters.map(
-                        (monster) => monster.meta.split(" ")[0]
-                    )
-                )
-            ).sort(),
-        [processedMonsters]
+        () => Array.from(new Set(monsters.map((monster) => monster.size))).sort(),
+        [monsters]
     );
     const monsterAlignments = useMemo(
         () =>
             Array.from(
-                new Set(
-                    processedMonsters.map(
-                        (monster) => monster.meta.split(" ")[2]
-                    )
-                )
+                new Set(monsters.map((monster) => monster.alignment))
             ).sort(),
-        [processedMonsters]
+        [monsters]
     );
 
     // Get unique challenge ratings for filter
     const challengeRatings = useMemo(() => {
-        const ratings = new Set(processedMonsters.map((monster) => monster.cr));
-        return Array.from(ratings).sort((a, b) => {
-            const aNum = a.includes("/") ? eval(a) : parseFloat(a);
-            const bNum = b.includes("/") ? eval(b) : parseFloat(b);
-            return aNum - bNum;
-        });
-    }, [processedMonsters]);
+        const ratings = new Set(monsters.map((monster) => monster.cr));
+        return Array.from(ratings).sort(
+            (a, b) => parseChallengeRating(a) - parseChallengeRating(b)
+        );
+    }, [monsters]);
 
     // Filter monsters based on search term and filters
     const filteredMonsters = useMemo(() => {
-        return processedMonsters.filter((monster) => {
+        return monsters.filter((monster) => {
             const matchesSearch = monster.name
                 .toLowerCase()
                 .includes(searchTerm.toLowerCase());
@@ -151,14 +88,25 @@ export function MonsterCompendium({ monsters }: MonsterCompendiumProps) {
                 matchesAlignment
             );
         });
-    }, [
-        processedMonsters,
-        searchTerm,
-        typeFilter,
-        crFilter,
-        sizeFilter,
-        alignmentFilter,
-    ]);
+    }, [monsters, searchTerm, typeFilter, crFilter, sizeFilter, alignmentFilter]);
+
+    // Full monster stat blocks (Traits/Actions/etc.) make up most of the
+    // dataset's size, so they're only fetched once a card is opened rather
+    // than shipped for every monster up front.
+    const viewMonsterDetails = async (name: string) => {
+        setLoadingMonster(name);
+        setLoadError(false);
+        try {
+            const res = await fetch(`/api/monsters/${encodeURIComponent(name)}`);
+            if (!res.ok) throw new Error("Failed to load monster");
+            const monster: MonsterDetail = await res.json();
+            setSelectedMonster(monster);
+        } catch {
+            setLoadError(true);
+        } finally {
+            setLoadingMonster(null);
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -290,12 +238,23 @@ export function MonsterCompendium({ monsters }: MonsterCompendiumProps) {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {loadError && (
+                        <Card className="col-span-full border-destructive">
+                            <CardContent className="py-4 text-center text-destructive">
+                                Failed to load monster details. Please try
+                                again.
+                            </CardContent>
+                        </Card>
+                    )}
                     {filteredMonsters.length > 0 ? (
                         filteredMonsters.map((monster) => (
                             <MonsterCard
                                 key={monster.name}
                                 monster={monster}
-                                onClick={() => setSelectedMonster(monster)}
+                                loading={loadingMonster === monster.name}
+                                onClick={() =>
+                                    viewMonsterDetails(monster.name)
+                                }
                             />
                         ))
                     ) : (

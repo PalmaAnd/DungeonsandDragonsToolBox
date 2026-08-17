@@ -127,8 +127,11 @@ export default function TavernGenerator() {
     );
 
     useEffect(() => {
+        // Read localStorage only after mount to avoid an SSR hydration
+        // mismatch (localStorage isn't available during server render).
         const storedTaverns = localStorage.getItem("savedTaverns");
         if (storedTaverns) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setSavedTaverns(JSON.parse(storedTaverns));
         }
     }, []);

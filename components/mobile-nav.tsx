@@ -18,8 +18,10 @@ export function MobileNav() {
     const [open, setOpen] = React.useState(false);
     const pathname = usePathname();
 
-    // Close mobile nav when route changes
+    // Close mobile nav when route changes (syncing with the router, an
+    // external system, so this belongs in an effect rather than render).
     React.useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setOpen(false);
     }, [pathname]);
 

@@ -36,7 +36,9 @@ export function DiceRoller() {
     const [rolls, setRolls] = useState<RollResult[]>([]);
     const [customRoll, setCustomRoll] = useState("");
 
+    // Only ever called from click handlers below, never during render.
     const rollDie = (sides: number): number => {
+        // eslint-disable-next-line react-hooks/purity
         return Math.floor(Math.random() * sides) + 1;
     };
 
@@ -55,7 +57,9 @@ export function DiceRoller() {
         };
     };
 
+    // Only ever called from click handlers below, never during render.
     const generateId = (): string => {
+        // eslint-disable-next-line react-hooks/purity
         return Date.now().toString() + Math.random().toString(36).substr(2, 9);
     };
 

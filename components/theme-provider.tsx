@@ -33,8 +33,12 @@ export function ThemeProvider({
     const [theme, setTheme] = useState<Theme>(defaultTheme);
 
     useEffect(() => {
+        // Read localStorage only after mount so the client's first render
+        // matches the server-rendered (default-theme) markup, then applies
+        // the saved theme without a hydration mismatch.
         const savedTheme = localStorage.getItem(storageKey) as Theme;
         if (savedTheme) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setTheme(savedTheme);
         }
     }, [storageKey]);
