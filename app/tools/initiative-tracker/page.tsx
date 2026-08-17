@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
     PlusCircle,
     Trash2,
@@ -28,6 +29,7 @@ import {
     EyeOff,
     Target,
     Sparkles,
+    BookOpen,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +46,9 @@ import {
     saveToStorage,
     STORAGE_KEYS,
 } from "@/lib/storage";
+import type { Combatant, EncounterState } from "@/lib/encounter";
+import { getActiveCampaign, appendSession, updateCampaigns } from "@/lib/campaign";
+import type { Campaign } from "@/lib/campaign";
 
 type Condition = {
     name: string;
@@ -52,26 +57,6 @@ type Condition = {
     color: string;
 };
 
-type Combatant = {
-    id: string;
-    name: string;
-    initiative: number;
-    initiativeModifier: number;
-    hp: number;
-    maxHp: number;
-    ac: number;
-    isPlayer: boolean;
-    savingThrows: number;
-    failedSaves: number;
-    conditions: string[];
-};
-
-type EncounterState = {
-    combatants: Combatant[];
-    currentTurn: number;
-    isCombatActive: boolean;
-    maxTurnTime: number;
-};
 
 const CONDITIONS: Record<string, Condition> = {
     blinded: {
@@ -184,6 +169,41 @@ export default function InitiativeTracker() {
         string | null
     >(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    const [activeCampaign, setActiveCampaign] = useState<Campaign | null>(
+        null
+    );
+    const [showSessionForm, setShowSessionForm] = useState(false);
+    const [sessionNotes, setSessionNotes] = useState("");
+    const [sessionFeedback, setSessionFeedback] = useState<string | null>(
+        null
+    );
+
+    useEffect(() => {
+        let cancelled = false;
+        getActiveCampaign().then((campaign) => {
+            if (!cancelled) setActiveCampaign(campaign);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const logSessionForActiveCampaign = async () => {
+        if (!activeCampaign || !sessionNotes.trim()) return;
+        const session = {
+            id: generateId(),
+            date: new Date().toISOString().slice(0, 10),
+            notes: sessionNotes,
+        };
+        await updateCampaigns((campaigns) =>
+            appendSession(campaigns, activeCampaign.id, session)
+        );
+        setSessionNotes("");
+        setShowSessionForm(false);
+        setSessionFeedback(`Session logged for ${activeCampaign.name}.`);
+        setTimeout(() => setSessionFeedback(null), 3000);
+    };
 
     // Restore a saved encounter on initial load (never auto-resume a running timer)
     useEffect(() => {
@@ -554,7 +574,7 @@ export default function InitiativeTracker() {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
                 <h1 className="text-3xl font-bold">Initiative Tracker</h1>
                 <div className="flex gap-2">
                     {combatants.length > 0 && (
@@ -567,8 +587,42 @@ export default function InitiativeTracker() {
                         <Sparkles className="mr-2 h-4 w-4" />
                         Show Example Fight
                     </Button>
+                    {activeCampaign && (
+                        <Button
+                            onClick={() => setShowSessionForm((prev) => !prev)}
+                            variant="outline"
+                        >
+                            <BookOpen className="mr-2 h-4 w-4" />
+                            Log Session for {activeCampaign.name}
+                        </Button>
+                    )}
                 </div>
             </div>
+
+            {sessionFeedback && (
+                <p className="text-sm text-muted-foreground mb-4">
+                    {sessionFeedback}
+                </p>
+            )}
+
+            {showSessionForm && activeCampaign && (
+                <Card className="mb-6">
+                    <CardContent className="pt-6 space-y-3">
+                        <Label htmlFor="tracker-session-notes">
+                            What happened this session?
+                        </Label>
+                        <Textarea
+                            id="tracker-session-notes"
+                            value={sessionNotes}
+                            onChange={(e) => setSessionNotes(e.target.value)}
+                            rows={3}
+                        />
+                        <Button onClick={logSessionForActiveCampaign}>
+                            Save Session
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Combat Timer Controls */}
             {isCombatActive && (
