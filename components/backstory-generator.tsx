@@ -16,6 +16,7 @@ import {
     saveToStorage,
     STORAGE_KEYS,
 } from "@/lib/storage";
+import { AddToCampaignButton } from "@/components/add-to-campaign-button";
 
 interface Backstory {
     origin: {
@@ -175,14 +176,20 @@ export function BackstoryGenerator() {
                                         {saved.origin.text}
                                     </CardTitle>
                                 </button>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    aria-label="Delete saved backstory"
-                                    onClick={() => deleteBackstory(saved.id)}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <AddToCampaignButton
+                                        field="backstoryIds"
+                                        entityId={saved.id}
+                                    />
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        aria-label="Delete saved backstory"
+                                        onClick={() => deleteBackstory(saved.id)}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </CardHeader>
                         </Card>
                     ))}

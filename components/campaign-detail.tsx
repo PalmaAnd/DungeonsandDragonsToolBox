@@ -29,6 +29,7 @@ import { addCombatantsToEncounter, type Combatant } from "@/lib/encounter";
 type SavedNpcSummary = { id: string; name: string; occupation?: string };
 type SavedLootSummary = { id: string; gold: number; container: string };
 type SavedTavernSummary = { id: string; name: string };
+type SavedBackstorySummary = { id: string; origin: { text: string } };
 
 export function CampaignDetail({ id }: { id: string }) {
     const router = useRouter();
@@ -39,6 +40,9 @@ export function CampaignDetail({ id }: { id: string }) {
     const [savedNpcs, setSavedNpcs] = useState<SavedNpcSummary[]>([]);
     const [savedLoot, setSavedLoot] = useState<SavedLootSummary[]>([]);
     const [savedTaverns, setSavedTaverns] = useState<SavedTavernSummary[]>([]);
+    const [savedBackstories, setSavedBackstories] = useState<
+        SavedBackstorySummary[]
+    >([]);
     const [sessionDate, setSessionDate] = useState(
         new Date().toISOString().slice(0, 10)
     );
@@ -58,6 +62,10 @@ export function CampaignDetail({ id }: { id: string }) {
                 STORAGE_KEYS.savedTaverns,
                 []
             ),
+            loadFromStorage<SavedBackstorySummary[]>(
+                STORAGE_KEYS.savedBackstories,
+                []
+            ),
         ]).then(
             ([
                 storedCampaigns,
@@ -65,6 +73,7 @@ export function CampaignDetail({ id }: { id: string }) {
                 storedNpcs,
                 storedLoot,
                 storedTaverns,
+                storedBackstories,
             ]) => {
                 if (cancelled) return;
                 setCampaigns(storedCampaigns.map(normalizeCampaign));
@@ -72,6 +81,7 @@ export function CampaignDetail({ id }: { id: string }) {
                 setSavedNpcs(storedNpcs);
                 setSavedLoot(storedLoot);
                 setSavedTaverns(storedTaverns);
+                setSavedBackstories(storedBackstories);
             }
         );
         return () => {
@@ -355,6 +365,23 @@ export function CampaignDetail({ id }: { id: string }) {
                         "tavernIds",
                         (tavern) => tavern.name,
                         "No saved taverns yet. Save one in the Tavern Generator to link it here."
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Linked Backstories</CardTitle>
+                    <CardDescription>
+                        Backstories saved from the Backstory Generator.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                    {renderLinkedList(
+                        savedBackstories,
+                        "backstoryIds",
+                        (backstory) => backstory.origin.text,
+                        "No saved backstories yet. Save one in the Backstory Generator to link it here."
                     )}
                 </CardContent>
             </Card>
