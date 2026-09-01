@@ -88,6 +88,7 @@ export function CampaignDashboard() {
                 lootIds: [],
                 tavernIds: [],
                 backstoryIds: [],
+                shopIds: [],
                 sessions: [],
             },
         ]);

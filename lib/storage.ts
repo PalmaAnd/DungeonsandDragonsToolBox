@@ -12,6 +12,7 @@ export const STORAGE_KEYS = {
     savedLoot: "dnd-toolbox:saved-loot",
     lootSettings: "dnd-toolbox:loot-settings",
     shopState: "dnd-toolbox:shop-state",
+    savedShops: "dnd-toolbox:saved-shops",
     weatherState: "dnd-toolbox:weather-state",
     initiativeEncounter: "dnd-toolbox:initiative-encounter",
     savedCharacters: "dnd-toolbox:saved-characters",

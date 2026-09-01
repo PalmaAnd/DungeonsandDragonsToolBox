@@ -20,6 +20,7 @@ export type Campaign = {
     lootIds: string[];
     tavernIds: string[];
     backstoryIds: string[];
+    shopIds: string[];
     sessions: Session[];
 };
 
@@ -28,7 +29,8 @@ export type LinkedEntityField =
     | "npcIds"
     | "lootIds"
     | "tavernIds"
-    | "backstoryIds";
+    | "backstoryIds"
+    | "shopIds";
 
 export type SavedCharacterSummary = {
     id: string;
@@ -57,6 +59,7 @@ export function normalizeCampaign(
         lootIds: raw.lootIds ?? [],
         tavernIds: raw.tavernIds ?? [],
         backstoryIds: raw.backstoryIds ?? [],
+        shopIds: raw.shopIds ?? [],
         sessions: raw.sessions ?? [],
     };
 }

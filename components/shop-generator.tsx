@@ -22,8 +22,22 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Store, User, Package, Coins, RefreshCw } from "lucide-react";
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
+import {
+    Store,
+    User,
+    Package,
+    Coins,
+    RefreshCw,
+    Save,
+    Trash2,
+} from "lucide-react";
+import {
+    generateId,
+    loadFromStorage,
+    saveToStorage,
+    STORAGE_KEYS,
+} from "@/lib/storage";
+import { AddToCampaignButton } from "@/components/add-to-campaign-button";
 
 // Define types
 type ShopStatus = "poor" | "modest" | "prosperous" | "wealthy" | "luxurious";
@@ -210,12 +224,19 @@ type ShopState = {
     cart: Item[];
 };
 
+type SavedShop = {
+    id: string;
+    shopDetails: ShopDetails;
+    inventory: Item[];
+};
+
 export function ShopGenerator({ itemsData }: ShopGeneratorProps) {
     const [shopDetails, setShopDetails] = useState<ShopDetails | null>(null);
     const [inventory, setInventory] = useState<Item[]>([]);
     const [shopStatus, setShopStatus] = useState<ShopStatus>("modest");
     const [activeTab, setActiveTab] = useState("shop");
     const [cart, setCart] = useState<Item[]>([]);
+    const [savedShops, setSavedShops] = useState<SavedShop[]>([]);
 
     const generateShop = () => {
         // Generate shop details
@@ -374,22 +395,25 @@ export function ShopGenerator({ itemsData }: ShopGeneratorProps) {
         }
     };
 
-    // Restore a saved shop on initial load, otherwise generate a fresh one
+    // Restore the current shop (and any saved shops) on initial load,
+    // otherwise generate a fresh one
     useEffect(() => {
         let cancelled = false;
-        loadFromStorage<ShopState | null>(STORAGE_KEYS.shopState, null).then(
-            (saved) => {
-                if (cancelled) return;
-                if (saved) {
-                    setShopDetails(saved.shopDetails);
-                    setInventory(saved.inventory);
-                    setShopStatus(saved.shopStatus);
-                    setCart(saved.cart);
-                } else if (itemsData) {
-                    generateShop();
-                }
+        Promise.all([
+            loadFromStorage<ShopState | null>(STORAGE_KEYS.shopState, null),
+            loadFromStorage<SavedShop[]>(STORAGE_KEYS.savedShops, []),
+        ]).then(([saved, storedShops]) => {
+            if (cancelled) return;
+            setSavedShops(storedShops);
+            if (saved) {
+                setShopDetails(saved.shopDetails);
+                setInventory(saved.inventory);
+                setShopStatus(saved.shopStatus);
+                setCart(saved.cart);
+            } else if (itemsData) {
+                generateShop();
             }
-        );
+        });
         return () => {
             cancelled = true;
         };
@@ -405,6 +429,30 @@ export function ShopGenerator({ itemsData }: ShopGeneratorProps) {
             cart,
         });
     }, [shopDetails, inventory, shopStatus, cart]);
+
+    const saveShop = () => {
+        if (!shopDetails) return;
+        const updated = [
+            ...savedShops,
+            { id: generateId(), shopDetails, inventory },
+        ];
+        setSavedShops(updated);
+        saveToStorage(STORAGE_KEYS.savedShops, updated);
+    };
+
+    const deleteShop = (id: string) => {
+        const updated = savedShops.filter((saved) => saved.id !== id);
+        setSavedShops(updated);
+        saveToStorage(STORAGE_KEYS.savedShops, updated);
+    };
+
+    const loadSavedShop = (saved: SavedShop) => {
+        setShopDetails(saved.shopDetails);
+        setInventory(saved.inventory);
+        setShopStatus(saved.shopDetails.status);
+        setCart([]);
+        setActiveTab("shop");
+    };
 
     const getStatusLabel = (status: ShopStatus) => {
         switch (status) {
@@ -479,6 +527,16 @@ export function ShopGenerator({ itemsData }: ShopGeneratorProps) {
                     <Store className="mr-2 h-4 w-4" />
                     Generate Shop
                 </Button>
+                {shopDetails && (
+                    <Button
+                        variant="outline"
+                        onClick={saveShop}
+                        className="w-full md:w-auto"
+                    >
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Shop
+                    </Button>
+                )}
             </div>
 
             {shopDetails && (
@@ -709,6 +767,49 @@ export function ShopGenerator({ itemsData }: ShopGeneratorProps) {
                         </div>
                     </TabsContent>
                 </Tabs>
+            )}
+
+            {savedShops.length > 0 && (
+                <div className="space-y-2">
+                    <h2 className="text-xl font-bold">Saved Shops</h2>
+                    {savedShops.map((saved) => (
+                        <Card key={saved.id}>
+                            <CardHeader className="flex flex-row items-center justify-between py-3">
+                                <button
+                                    className="text-left"
+                                    onClick={() => loadSavedShop(saved)}
+                                >
+                                    <CardTitle className="text-base">
+                                        {saved.shopDetails.name}
+                                    </CardTitle>
+                                    <p className="text-sm text-muted-foreground">
+                                        {getStatusLabel(
+                                            saved.shopDetails.status
+                                        )}{" "}
+                                        &middot; {saved.inventory.length} item
+                                        {saved.inventory.length === 1
+                                            ? ""
+                                            : "s"}
+                                    </p>
+                                </button>
+                                <div className="flex items-center gap-2">
+                                    <AddToCampaignButton
+                                        field="shopIds"
+                                        entityId={saved.id}
+                                    />
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        aria-label="Delete saved shop"
+                                        onClick={() => deleteShop(saved.id)}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                        </Card>
+                    ))}
+                </div>
             )}
         </div>
     );

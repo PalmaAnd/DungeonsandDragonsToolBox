@@ -30,6 +30,10 @@ type SavedNpcSummary = { id: string; name: string; occupation?: string };
 type SavedLootSummary = { id: string; gold: number; container: string };
 type SavedTavernSummary = { id: string; name: string };
 type SavedBackstorySummary = { id: string; origin: { text: string } };
+type SavedShopSummary = {
+    id: string;
+    shopDetails: { name: string; status: string };
+};
 
 export function CampaignDetail({ id }: { id: string }) {
     const router = useRouter();
@@ -43,6 +47,7 @@ export function CampaignDetail({ id }: { id: string }) {
     const [savedBackstories, setSavedBackstories] = useState<
         SavedBackstorySummary[]
     >([]);
+    const [savedShops, setSavedShops] = useState<SavedShopSummary[]>([]);
     const [sessionDate, setSessionDate] = useState(
         new Date().toISOString().slice(0, 10)
     );
@@ -66,6 +71,7 @@ export function CampaignDetail({ id }: { id: string }) {
                 STORAGE_KEYS.savedBackstories,
                 []
             ),
+            loadFromStorage<SavedShopSummary[]>(STORAGE_KEYS.savedShops, []),
         ]).then(
             ([
                 storedCampaigns,
@@ -74,6 +80,7 @@ export function CampaignDetail({ id }: { id: string }) {
                 storedLoot,
                 storedTaverns,
                 storedBackstories,
+                storedShops,
             ]) => {
                 if (cancelled) return;
                 setCampaigns(storedCampaigns.map(normalizeCampaign));
@@ -82,6 +89,7 @@ export function CampaignDetail({ id }: { id: string }) {
                 setSavedLoot(storedLoot);
                 setSavedTaverns(storedTaverns);
                 setSavedBackstories(storedBackstories);
+                setSavedShops(storedShops);
             }
         );
         return () => {
@@ -382,6 +390,30 @@ export function CampaignDetail({ id }: { id: string }) {
                         "backstoryIds",
                         (backstory) => backstory.origin.text,
                         "No saved backstories yet. Save one in the Backstory Generator to link it here."
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Linked Shops</CardTitle>
+                    <CardDescription>
+                        Shops saved from the Magic Item Shop generator.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                    {renderLinkedList(
+                        savedShops,
+                        "shopIds",
+                        (shop) => (
+                            <>
+                                {shop.shopDetails.name}{" "}
+                                <span className="text-muted-foreground">
+                                    ({shop.shopDetails.status})
+                                </span>
+                            </>
+                        ),
+                        "No saved shops yet. Save one in the Magic Item Shop generator to link it here."
                     )}
                 </CardContent>
             </Card>
