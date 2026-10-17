@@ -2,6 +2,7 @@
 // Uses jsPDF for actual PDF generation
 
 import jsPDF from "jspdf";
+import DOMPurify from "dompurify";
 
 export interface CharacterSheetData {
     name: string;
@@ -758,10 +759,11 @@ export class CharacterSheetPDFGenerator {
 export const printCharacterSheet = (character: CharacterSheetData) => {
     const htmlContent =
         CharacterSheetPDFGenerator["generateHTMLCharacterSheet"](character);
+    const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent);
     const printWindow = window.open("", "_blank");
 
     if (printWindow) {
-        printWindow.document.write(htmlContent);
+        printWindow.document.write(sanitizedHtmlContent);
         printWindow.document.close();
         printWindow.focus();
         printWindow.print();
